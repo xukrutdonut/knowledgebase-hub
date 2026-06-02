@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-label="Vesículas Sinápticas" preserveAspectRatio="xMidYMid meet" width="100%" height="auto">
+  <title>Vesículas Sinápticas</title>
+  <desc>Almacenamiento y liberación vesicular - NeuropedGx Hub</desc>
+  <defs>
+    <marker id="arrowBlue" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#6c8fff"/></marker>
+    <marker id="arrowGreen" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#34d399"/></marker>
+    <marker id="arrowRed" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#f87171"/></marker>
+    <marker id="arrowOrange" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#fb923c"/></marker>
+    <linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d2236"/><stop offset="100%" stop-color="#131724"/></linearGradient>
+    <style>
+      text { font-family: Inter, system-ui, sans-serif; }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="900" height="520" fill="#0f1117"/>
+  <text x="450" y="80" font-size="28" font-weight="800" fill="#f8fafc" text-anchor="middle">Vesículas Sinápticas</text>
+  <text x="450" y="110" font-size="14" font-weight="500" fill="#94a3b8" text-anchor="middle">NeuropedGx Hub · Diagrama biomédico</text>
+  <rect x="50" y="150" width="800" height="300" rx="12" fill="url(#panelGlow)" stroke="#2e3250" stroke-width="1"/>
+  <text x="450" y="310" font-size="18" font-weight="600" fill="#fb923c" text-anchor="middle">Vesículas Sinápticas</text>
+  <text x="450" y="360" font-size="13" font-weight="400" fill="#94a3b8" text-anchor="middle">Diagrama interactivo optimizado</text>
+</svg>

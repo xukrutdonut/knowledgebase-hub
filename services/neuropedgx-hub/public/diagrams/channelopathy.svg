@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-label="Canaloppatías — Canales Iónicos" preserveAspectRatio="xMidYMid meet" width="100%" height="auto">
+  <title>Canalopppatías — Disfunción de Canales Iónicos</title>
+  <desc>Alteraciones en canales iónicos y proteínas de membrana que afectan la neurotransmisión y función neuronal</desc>
+  <defs>
+    <marker id="arrowBlue" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#6c8fff"/></marker>
+    <marker id="arrowGreen" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#34d399"/></marker>
+    <marker id="arrowRed" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#f87171"/></marker>
+    <marker id="arrowOrange" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#fb923c"/></marker>
+    <linearGradient id="membraneGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1e293b"/><stop offset="50%" stop-color="#0f172a"/><stop offset="100%" stop-color="#1e293b"/></linearGradient>
+    <linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d2236"/><stop offset="100%" stop-color="#131724"/></linearGradient>
+    <style>
+      text { font-family: Inter, system-ui, sans-serif; }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="900" height="520" fill="#0f1117"/>
+  <text x="36" y="42" font-size="26" font-weight="800" fill="#f8fafc" text-anchor="start">Canalopppatías — Disfunción de Canales Iónicos</text>
+  <text x="36" y="67" font-size="13" font-weight="500" fill="#94a3b8" text-anchor="start">Canales Na+, K+, Ca2+ · Proteínas sinápticas · Impacto en neurotransmisión</text>
+  
+  <!-- Main pathway panel -->
+  <rect x="34" y="84" width="832" height="398" rx="12" fill="url(#panelGlow)" stroke="#2e3250" stroke-width="1"/>
+  
+  <!-- Membrane representation -->
+  <rect x="80" y="140" width="700" height="80" fill="url(#membraneGrad)" stroke="#6c8fff" stroke-width="1" rx="4"/>
+  <text x="50" y="155" font-size="10" font-weight="700" fill="#94a3b8" text-anchor="end">MEMBRANA</text>
+  
+  <!-- Na+ channel (Voltage-gated) -->
+  <g>
+    <rect x="95" y="160" width="45" height="40" rx="4" fill="#6c8fff" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+    <text x="117" y="180" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">Na+</text>
+    <text x="117" y="192" font-size="8" font-weight="500" fill="#dbeafe" text-anchor="middle">VG</text>
+  </g>
+  
+  <!-- K+ channel -->
+  <g>
+    <rect x="160" y="160" width="45" height="40" rx="4" fill="#34d399" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+    <text x="182" y="180" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">K+</text>
+    <text x="182" y="192" font-size="8" font-weight="500" fill="#a7f3d0" text-anchor="middle">VG</text>
+  </g>
+  
+  <!-- Ca2+ channel L-type -->
+  <g>
+    <rect x="225" y="160" width="45" height="40" rx="4" fill="#f87171" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+    <text x="247" y="180" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">Ca2+</text>
+    <text x="247" y="192" font-size="8" font-weight="500" fill="#fca5a5" text-anchor="middle">L-type</text>
+  </g>
+  
+  <!-- GABA receptor -->
+  <g>
+    <rect x="290" y="160" width="45" height="40" rx="4" fill="#a78bfa" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+    <text x="312" y="180" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">GABA</text>
+    <text x="312" y="192" font-size="8" font-weight="500" fill="#ede9fe" text-anchor="middle">Cl-</text>
+  </g>
+  
+  <!-- Glutamate receptor (AMPA/NMDA) -->
+  <g>
+    <rect x="355" y="160" width="45" height="40" rx="4" fill="#fb923c" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+    <text x="377" y="180" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">Glu</text>
+    <text x="377" y="192" font-size="8" font-weight="500" fill="#fed7aa" text-anchor="middle">NMDA</text>
+  </g>
+  
+  <!-- Intracellular signaling -->
+  <line x1="420" y1="200" x2="420" y2="240" stroke="#6c8fff" stroke-width="1.2" marker-end="url(#arrowBlue)"/>
+  
+  <!-- Calcium influx effects -->
+  <rect x="400" y="240" width="80" height="35" rx="6" fill="#f87171" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="440" y="258" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">Ca2+ ↑</text>
+  <text x="440" y="270" font-size="9" font-weight="500" fill="#fca5a5" text-anchor="middle">Excitabilidad</text>
+  
+  <!-- Ion balance disruption -->
+  <rect x="510" y="240" width="80" height="35" rx="6" fill="#f87171" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="550" y="258" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">↑ Deseq.</text>
+  <text x="550" y="270" font-size="9" font-weight="500" fill="#fca5a5" text-anchor="middle">Iónico</text>
+  
+  <!-- Clinical outcomes -->
+  <rect x="80" y="310" width="700" height="55" rx="8" fill="rgba(248,113,113,0.1)" stroke="#f87171" stroke-width="1"/>
+  <text x="100" y="330" font-size="10" font-weight="700" fill="#fca5a5">Manifestaciones clínicas:</text>
+  <text x="100" y="350" font-size="9" font-weight="500" fill="#94a3b8">• Epilepsia • Ataxia • Mitonía • Debilidad muscular • Arritmias cardíacas • Sordera • Migraña</text>
+  
+  <!-- Genes box -->
+  <rect x="80" y="375" width="700" height="50" rx="8" fill="rgba(99,102,241,0.1)" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <text x="100" y="393" font-size="10" font-weight="700" fill="#818cf8">Genes implicados:</text>
+  <text x="100" y="411" font-size="9" font-weight="500" fill="#94a3b8">SCN1A, SCN1B (Na) • KCNQ2/3, KCNH1 (K) • CACNA1A, CACNA1D (Ca) • GABRA1, GABRB3 • GRIN2A, GRIN2B</text>
+  
+  <!-- Footer -->
+  <text x="450" y="475" font-size="11" font-weight="500" fill="#64748b" text-anchor="middle">Haz clic en genes subrayados para más información clínica</text>
+</svg>

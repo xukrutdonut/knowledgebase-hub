@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-label="Metabolismo de Purinas - Síntesis y Degradación" preserveAspectRatio="xMidYMid meet" width="100%" height="auto">
+  <title>Metabolismo de Purinas - Síntesis y Degradación</title>
+  <desc>Diagrama del metabolismo de purinas, síntesis de novo y salvamento, manifestaciones neurológicas - NeuropedGx Hub</desc>
+  <defs>
+    <marker id="arrowBlue" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#6c8fff"/></marker>
+    <marker id="arrowGreen" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#34d399"/></marker>
+    <marker id="arrowRed" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#f87171"/></marker>
+    <marker id="arrowOrange" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#fb923c"/></marker>
+    <linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d2236"/><stop offset="100%" stop-color="#131724"/></linearGradient>
+    <style>
+      text { font-family: Inter, system-ui, sans-serif; }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="900" height="520" fill="#0f1117"/>
+  <text x="36" y="42" font-size="26" font-weight="800" fill="#f8fafc" text-anchor="start">Metabolismo de Purinas — HGPRT y Lesch-Nyhan</text>
+  <text x="36" y="67" font-size="13" font-weight="500" fill="#94a3b8" text-anchor="start">NeuropedGx Hub · Diagrama biomédico</text>
+  <rect x="34" y="84" width="832" height="398" rx="12" fill="url(#panelGlow)" stroke="#2e3250" stroke-width="1"/>
+  <text x="82" y="120" font-size="11" font-weight="800" fill="#94a3b8" text-anchor="start">SÍNTESIS DE NOVO vs SALVAMENTO</text>
+  <rect x="70" y="140" width="120" height="60" rx="8" fill="#6c8fff" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="130" y="160" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">SÍNTESIS</text>
+  <text x="130" y="178" font-size="10" font-weight="600" fill="#94a3b8" text-anchor="middle">DE NOVO</text>
+  <text x="130" y="194" font-size="9" font-weight="500" fill="#94a3b8" text-anchor="middle">PRPP + bases</text>
+  <line x1="190" y1="170" x2="280" y2="170" stroke="#6c8fff" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+  <rect x="280" y="140" width="120" height="60" rx="8" fill="#34d399" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="340" y="160" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">SALVAMENTO</text>
+  <text x="340" y="178" font-size="10" font-weight="600" fill="#94a3b8" text-anchor="middle">HGPRT</text>
+  <text x="340" y="194" font-size="9" font-weight="500" fill="#94a3b8" text-anchor="middle">Hipoxantina/Guanina</text>
+  <rect x="420" y="155" width="80" height="30" rx="8" fill="#a78bfa" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="460" y="175" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">IMP / GMP</text>
+  <line x1="400" y1="170" x2="420" y2="170" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowGreen)"/>
+  <line x1="460" y1="185" x2="460" y2="230" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+  <rect x="410" y="232" width="100" height="40" rx="8" fill="#fb923c" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="460" y="252" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">ATP / GTP</text>
+  <text x="460" y="268" font-size="9" font-weight="500" fill="#94a3b8" text-anchor="middle">Nucleótidos activos</text>
+  <line x1="510" y1="252" x2="600" y2="252" stroke="#fb923c" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowOrange)"/>
+  <text x="520" y="240" font-size="10" font-weight="700" fill="#fb923c" text-anchor="start">Síntesis ADN/ARN</text>
+  <line x1="460" y1="272" x2="380" y2="330" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowRed)"/>
+  <text x="380" y="320" font-size="10" font-weight="700" fill="#f87171" text-anchor="start">Exceso purina</text>
+  <rect x="300" y="332" width="100" height="40" rx="8" fill="#fb923c" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="350" y="352" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">Hipoxantina</text>
+  <text x="350" y="368" font-size="9" font-weight="500" fill="#94a3b8" text-anchor="middle">→ Xantina</text>
+  <line x1="400" y1="352" x2="480" y2="352" stroke="#fb923c" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowOrange)"/>
+  <rect x="480" y="332" width="100" height="40" rx="8" fill="#fbbf24" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="530" y="352" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">XOD</text>
+  <text x="530" y="368" font-size="9" font-weight="500" fill="#94a3b8" text-anchor="middle">Xantina oxidasa</text>
+  <line x1="580" y1="352" x2="660" y2="352" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowOrange)"/>
+  <rect x="660" y="332" width="100" height="40" rx="8" fill="#f87171" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="710" y="352" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">Ácido Úrico</text>
+  <text x="710" y="368" font-size="9" font-weight="500" fill="#94a3b8" text-anchor="middle">Eliminación renal</text>
+  <rect x="70" y="390" width="140" height="50" rx="8" fill="#2d0000" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="140" y="410" font-size="11" font-weight="700" fill="#f87171" text-anchor="middle">LESCH-NYHAN</text>
+  <text x="140" y="428" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">HGPRT↓ ↑↑ ác. úrico</text>
+  <rect x="230" y="390" width="140" height="50" rx="8" fill="#2d0000" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="300" y="410" font-size="11" font-weight="700" fill="#f87171" text-anchor="middle">Manifestaciones</text>
+  <text x="300" y="428" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">Espasticidad, conducta</text>
+  <rect x="390" y="390" width="140" height="50" rx="8" fill="#2d0000" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="460" y="410" font-size="11" font-weight="700" fill="#f87171" text-anchor="middle">Complicaciones</text>
+  <text x="460" y="428" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">Nefrolitiasis, gota</text>
+  <rect x="550" y="390" width="140" height="50" rx="8" fill="#0d2018" stroke="#166534" stroke-width="1.5"/>
+  <text x="620" y="410" font-size="11" font-weight="700" fill="#34d399" text-anchor="middle">Tratamiento</text>
+  <text x="620" y="428" font-size="10" font-weight="600" fill="#34d399" text-anchor="middle">Alopurinol, Febuxostat</text>
+</svg>

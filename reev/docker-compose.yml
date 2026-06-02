@@ -464,6 +464,32 @@ services:
       - "--broker=amqp://guest@rabbitmq:5672//"
       - "flower"
 
+  # -- NeuropedGx Hub (neuropediatric gene panel + variant classifier) --------
+  neuropedgx-hub:
+    container_name: neuropedgx-hub
+    hostname: neuropedgx-hub
+    build:
+      context: ../services/neuropedgx-hub
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8405:8000"
+    environment:
+      REEV_API_URL: "http://reev-backend:8080"
+      PROTEIN_VIEWER_URL: "http://protein-viewer:3000"
+      PROTEIN_VIEWER_EXTERNAL_URL: "https://protein.neuropedialab.org"
+      REEV_EXTERNAL_URL: "https://reev.neuropedialab.org"
+    networks:
+      - reev
+    volumes:
+      - ../services/neuropedgx-hub/data:/app/data:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/stats')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
 # == Secrets =================================================================
 
 secrets:

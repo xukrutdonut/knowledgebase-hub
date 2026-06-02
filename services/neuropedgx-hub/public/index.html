@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuropedGx Hub — Panel Genético Neuropediátrico</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --surface2: #232640;
+      --border: #2e3250;
+      --accent: #6c8fff;
+      --accent2: #a78bfa;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --orange: #fb923c;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+    /* ── Layout ── */
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100; }
+    header h1 { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+    header span { color: var(--muted); font-size: 0.8rem; }
+    .badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 0.75rem; color: var(--muted); }
+    main { display: grid; grid-template-columns: 280px 1fr; min-height: calc(100vh - 57px); }
+    aside { background: var(--surface); border-right: 1px solid var(--border); padding: 16px; overflow-y: auto; }
+    .content { padding: 24px; overflow-y: auto; }
+
+    /* ── Search ── */
+    .search-wrap { position: relative; margin-bottom: 16px; }
+    .search-wrap input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px 10px 36px; color: var(--text); font-size: 0.875rem; outline: none; transition: border-color .2s; }
+    .search-wrap input:focus { border-color: var(--accent); }
+    .search-wrap .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 1rem; }
+
+    /* ── Sidebar hierarchy ── */
+    .sidebar-section { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 6px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+    .sidebar-section:hover { color: var(--text); }
+    .sidebar-section .toggle { font-size: 0.6rem; transition: transform .2s; }
+    .sidebar-section.collapsed .toggle { transform: rotate(-90deg); }
+    .meta-group { font-size: 0.76rem; font-weight: 600; color: var(--accent2); margin: 10px 0 4px 2px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; border-radius: 6px; user-select: none; }
+    .meta-group:hover { background: var(--surface2); }
+    .meta-group .toggle { font-size: 0.55rem; color: var(--muted); transition: transform .2s; }
+    .meta-group.collapsed .toggle { transform: rotate(-90deg); }
+    .meta-children { padding-left: 8px; border-left: 2px solid var(--border); margin-left: 6px; }
+    .group-btn { width: 100%; text-align: left; background: none; border: none; border-radius: 8px; padding: 7px 10px; cursor: pointer; color: var(--text); font-size: 0.8rem; display: flex; justify-content: space-between; align-items: center; transition: background .15s; }
+    .group-btn:hover, .group-btn.active { background: var(--surface2); color: var(--accent); }
+    .group-btn .cnt { background: var(--surface2); border-radius: 10px; padding: 1px 7px; font-size: 0.68rem; color: var(--muted); min-width: 22px; text-align: center; }
+    .group-btn.active .cnt { background: var(--accent); color: #fff; }
+    .sidebar-tree { overflow: hidden; transition: max-height .25s ease; }
+    .sidebar-tree.collapsed { max-height: 0 !important; }
+
+    /* ── Cards ── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+    .card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .gene-symbol { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+    .gene-name { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Tags ── */
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .tag { border-radius: 6px; padding: 2px 9px; font-size: 0.72rem; font-weight: 600; }
+    .tag-group { background: #1e3a5f; color: #93c5fd; }
+    .tag-label { background: #1a2e1a; color: #86efac; }
+    .tag-mech { background: #2d1a3e; color: #c4b5fd; }
+    .tag-inh { background: #2d2a14; color: #fde68a; }
+
+    /* ── Mechanism badge ── */
+    .mech-gof { color: var(--orange); }
+    .mech-lof { color: var(--accent); }
+    .mech-dual { color: var(--yellow); }
+
+    /* ── Notes accordion ── */
+    details { margin-top: 10px; }
+    summary { cursor: pointer; font-size: 0.8rem; font-weight: 600; color: var(--muted); list-style: none; display: flex; align-items: center; gap: 6px; }
+    summary::before { content: '▶'; font-size: 0.6rem; transition: transform .2s; }
+    details[open] summary::before { transform: rotate(90deg); }
+    .notes-list { margin-top: 8px; padding-left: 14px; }
+    .notes-list li { font-size: 0.8rem; color: var(--text); margin-bottom: 5px; line-height: 1.5; }
+    .notes-list li.warn { color: var(--yellow); }
+    .notes-list li.crit { color: var(--red); }
+
+    /* ── ACMG hints ── */
+    .acmg-row { display: flex; gap: 8px; align-items: flex-start; font-size: 0.78rem; margin-bottom: 5px; }
+    .acmg-crit { background: var(--surface2); border-radius: 5px; padding: 2px 7px; font-weight: 700; color: var(--accent2); white-space: nowrap; }
+
+    /* ── Links ── */
+    .link-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .ext-link { font-size: 0.75rem; text-decoration: none; color: var(--accent); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; transition: background .15s; }
+    .ext-link:hover { background: var(--surface2); }
+    .ext-link.primary { background: var(--accent); color: #0f1117; border-color: var(--accent); font-weight: 700; }
+
+    /* ── Hotspots ── */
+    .hotspot { background: var(--surface2); border-left: 3px solid var(--orange); border-radius: 0 6px 6px 0; padding: 6px 10px; margin-bottom: 6px; font-size: 0.78rem; }
+    .hotspot .hp { font-weight: 700; color: var(--orange); }
+
+    /* ── Variant form ── */
+    .variant-form { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 4px; }
+    .form-group input, .form-group select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; color: var(--text); font-size: 0.82rem; outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--accent); }
+    .btn { background: var(--accent); color: #0f1117; border: none; border-radius: 8px; padding: 10px 22px; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+    /* ── Report ── */
+    .report { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .report-flag { border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 0.82rem; line-height: 1.5; }
+    .flag-warn { background: #2d2000; border: 1px solid #92400e; }
+    .flag-info { background: #0c1a2e; border: 1px solid #1e3a5f; }
+    .flag-ok { background: #0d2018; border: 1px solid #166534; }
+    .flag-critical { background: #2d0000; border: 1px solid #991b1b; }
+    .disclaimer { background: #1a1500; border: 1px solid #92400e; border-radius: 8px; padding: 12px; font-size: 0.75rem; color: var(--yellow); margin-top: 14px; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .stat-num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+    /* ── View tabs ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+    .tab { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 8px 18px; color: var(--muted); font-size: 0.82rem; cursor: pointer; transition: all .15s; }
+    .tab.active { background: var(--accent); color: #0f1117; border-color: var(--accent); font-weight: 700; }
+
+    /* ── Loading ── */
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin-bottom: 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty h3 { margin-bottom: 8px; color: var(--text); }
+
+    /* ── Group overview ── */
+    .group-overview { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+    .group-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color .2s; }
+    .group-card:hover { border-color: var(--accent); }
+    .group-card h3 { font-size: 0.95rem; color: var(--accent); margin-bottom: 6px; }
+    .group-card p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+    .group-card .gene-count { font-size: 0.75rem; color: var(--green); margin-top: 8px; }
+
+    /* ── Home symptom navigator ── */
+    .home-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 24px; }
+    .home-search-bar { display: flex; gap: 8px; margin-bottom: 24px; }
+    .home-search-bar input { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; color: var(--text); font-size: 0.9rem; outline: none; }
+    .home-search-bar input:focus { border-color: var(--accent); }
+    .home-search-bar input::placeholder { color: var(--muted); }
+    .sym-tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+    .sym-tab { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 6px 16px; font-size: 0.8rem; color: var(--muted); cursor: pointer; transition: all .15s; }
+    .sym-tab.active { background: var(--accent); color: #0f1117; border-color: var(--accent); font-weight: 700; }
+    .sym-tab.treatable { border-color: var(--green); color: var(--green); }
+    .sym-tab.treatable.active { background: var(--green); color: #0f1117; }
+    .sym-section { margin-bottom: 28px; }
+    .sym-section h3 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .sym-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .sym-chip { background: #1a1f2e; border: 1px solid var(--border); border-radius: 16px; padding: 5px 13px; font-size: 0.78rem; color: var(--text); cursor: pointer; transition: all .15s; white-space: nowrap; }
+    .sym-chip:hover { border-color: var(--accent); color: var(--accent); }
+    .sym-chip.active { background: var(--accent); color: #0f1117; border-color: var(--accent); font-weight: 600; }
+    .sym-chip.non-neuro { background: #1a2a1f; border-color: #2d4a35; color: #86efac; }
+    .sym-chip.non-neuro:hover, .sym-chip.non-neuro.active { background: var(--green); color: #0f1117; border-color: var(--green); }
+    .sym-chip.treatable-tag { background: #1a2530; border-color: #1d4ed8; color: #93c5fd; }
+    .sym-chip.treatable-tag:hover, .sym-chip.treatable-tag.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+    .sym-results { margin-top: 20px; }
+    .sym-result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .sym-result-header h3 { font-size: 0.88rem; color: var(--text); }
+    .sym-result-header .clear-btn { font-size: 0.75rem; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+    .sym-result-header .clear-btn:hover { color: var(--text); }
+    .gene-result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+    .gene-result-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: border-color .15s; }
+    .gene-result-card:hover { border-color: var(--accent); }
+    .gene-result-card .sym { font-size: 1rem; font-weight: 700; color: var(--accent); }
+    .gene-result-card .name { font-size: 0.73rem; color: var(--muted); margin: 2px 0 6px; }
+    .gene-result-card .tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .gene-result-card .tag { font-size: 0.68rem; padding: 2px 7px; border-radius: 10px; background: #1e2535; border: 1px solid var(--border); color: var(--muted); }
+    .gene-result-card .tag.match { background: #0d2018; border-color: #166534; color: var(--green); }
+    .gene-result-card .tag.treat { background: #0d1a33; border-color: #1d4ed8; color: #93c5fd; }
+
+    /* ── ClinGen badge ── */
+    .clingen { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--green); background: #0d2018; border: 1px solid #166534; border-radius: 5px; padding: 2px 8px; }
+
+    /* ── Pathway SVG diagram ── */
+    .pathway-wrap { position: relative; margin-bottom: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .pathway-wrap svg { width: 100%; height: auto; display: block; }
+    .pathway-wrap .svg-caption { font-size: 0.72rem; color: var(--muted); padding: 6px 14px 10px; text-align: center; }
+    .gene-label-clickable { cursor: pointer; transition: opacity .15s; }
+    .gene-label-clickable:hover { opacity: 0.75; }
+    .svg-no-diagram { display: none; }
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; }
+      aside { display: none; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🧬 NeuropedGx Hub</h1>
+    <span>Neuropediatric Genetic Knowledge Database · <span id="totalGenes">—</span> genes</span>
+  </div>
+  <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+    <span class="badge" id="panelVersion">v2026.06</span>
+    <a href="/docs" target="_blank" class="ext-link" style="margin:0">API docs</a>
+  </div>
+</header>
+
+<main>
+  <!-- ── Sidebar ── -->
+  <aside>
+    <div class="search-wrap">
+      <span class="icon">🔍</span>
+      <input id="sideSearch" type="text" placeholder="Buscar gen (SCN1A, PTPN11…)" autocomplete="off" />
+    </div>
+
+    <div class="sidebar-section">Vista</div>
+    <button class="group-btn" id="homeBtn" onclick="showView('overview')">🏠 Home</button>
+
+    <div class="sidebar-section" id="hdr-fisiopa" onclick="toggleSection('fisiopa')">
+      <span>🔬 Fisiopatología</span><span class="toggle">▾</span>
+    </div>
+    <div class="sidebar-tree" id="tree-fisiopa"></div>
+
+    <div class="sidebar-section" id="hdr-clinica" onclick="toggleSection('clinica')">
+      <span>🧠 Por Clínica</span><span class="toggle">▾</span>
+    </div>
+    <div class="sidebar-tree" id="tree-clinica"></div>
+
+    <div class="sidebar-section" id="hdr-grupos" onclick="toggleSection('grupos')">
+      <span>📋 Todos los grupos</span><span class="toggle">▾</span>
+    </div>
+    <div class="sidebar-tree" id="tree-grupos"></div>
+  </aside>
+
+  <!-- ── Main content ── -->
+  <div class="content" id="mainContent">
+    <div class="loading"><div class="spinner"></div><br>Cargando panel…</div>
+  </div>
+</main>
+
+<script>
+const API = '';  // same origin
+let allGroups = [];
+let allGenes = [];
+let currentView = 'overview';
+let currentGroup = null;
+
+// ── Boot ─────────────────────────────────────────────────
+async function init() {
+  const [groups, stats] = await Promise.all([
+    fetch(`${API}/api/groups`).then(r => r.json()),
+    fetch(`${API}/api/stats`).then(r => r.json()),
+  ]);
+  allGroups = groups;
+  document.getElementById('totalGenes').textContent = stats.total_genes;
+  renderSidebar(groups);
+  showView('overview');
+
+  document.getElementById('sideSearch').addEventListener('input', e => {
+    const q = e.target.value.trim();
+    if (q.length >= 2) searchGenes(q);
+    else if (q.length === 0 && currentGroup) loadGroup(currentGroup);
+  });
+}
+
+// ── Hierarchy definition ──────────────────────────────────
+const HIERARCHY_FISIOPA = [
+  {
+    id: 'canalopathy_top', label: '⚡ Canalopatías',
+    groups: ['channelopathy']
+  },
+  {
+    id: 'transport_top', label: '🚌 Transportopatías',
+    groups: ['transportopathy']
+  },
+  {
+    id: 'ecm', label: '🧫 Errores Congénitos del Metabolismo',
+    groups: [
+      'neurotransmitter_defect', 'nt_synthesis', 'nt_vesicle', 'nt_reuptake', 'nt_catabolism', 'cofactor_nt', 'gaba_metabolism', 'nkh',
+      'purine_metabolism', 'organic_acidemia', 'creatine_disorder',
+      'mitochondrial', 'lysosomal', 'peroxisomal', 'cdg',
+      'leukodystrophy', 'metabolic'
+    ]
+  },
+  {
+    id: 'tnd', label: '🧬 Señalización, Epigenética y Estructura',
+    groups: ['rasopathy', 'mtoropathy', 'cohesinopathy', 'microtubulipathy', 'chromatin_remodeling', 'transcription_factor', 'synaptopathy', 'ciliopathy', 'neuromuscular', 'other_ndd']
+  },
+  {
+    id: 'immunoneuro', label: '🛡️ Inmunoneurología',
+    groups: ['interferonopathy', 'autoinflammatory_cns', 'complement_neuro']
+  },
+  {
+    id: 'dna_instab', label: '🔧 Inestabilidad Genómica',
+    groups: ['dna_repair']
+  }
+];
+
+// JERARQUÍA CLÍNICA — con sub-secciones anidadas
+const HIERARCHY_CLINICA = [
+  {
+    id: 'mov', label: '🏃 Trastornos del Movimiento',
+    groups: [
+      { id: 'dystonia',           label: '🔄 Distonía' },
+      { id: 'parkinsonism_early', label: '⚙️ Parkinsonismo precoz' },
+      { id: 'ataxia',             label: '🌀 Ataxia' },
+      { id: 'spastic_paraplegia', label: '⬆️ Paraparesia Espástica Hereditaria' },
+    ]
+  },
+  {
+    id: 'epi', label: '⚡ Epilepsia',
+    groups: [
+      { id: 'dee', label: '🧠 DEE / Encefalopatías Epilépticas del Desarrollo' },
+    ]
+  },
+  {
+    id: 'nm', label: '💪 Neuromuscular',
+    groups: [
+      { id: 'muscular_dystrophy',  label: '🟥 Distrofias Musculares' },
+      { id: 'congenital_md',       label: '🟧 Distrofias Musculares Congénitas' },
+      { id: 'metabolic_myopathy',  label: '🧪 Miopatías Metabólicas' },
+      { id: 'congenital_myopathy', label: '🔬 Miopatías Congénitas' },
+      { id: 'genetic_neuropathy',  label: '🔗 Neuropatías Genéticas (CMT y otras)' },
+      { id: 'neuromuscular',       label: '💪 Neuromuscular (otros)' },
+    ]
+  },
+  {
+    id: 'dev', label: '🧠 Neurodesarrollo / Cognitivo',
+    groups: [
+      { id: 'id_syndromic',   label: '🟦 DI sindrómica' },
+      { id: 'id_nonsyndromic',label: '🟣 DI no sindrómica' },
+      { id: 'xlid',           label: '🔵 DI ligada al X' },
+      { id: 'microcephaly',   label: '🔵 Microcefalia' },
+      { id: 'autism_specific',label: '🟡 Trastorno del Espectro Autista' },
+    ]
+  },
+  {
+    id: 'leuco_sec', label: '⬜ Leucodistrofia',
+    groups: [
+      { id: 'leukodystrophy', label: '⬜ Leucodistrofia' },
+    ]
+  },
+];
+
+// ── Sidebar ──────────────────────────────────────────────
+function toggleSection(id) {
+  const tree = document.getElementById(`tree-${id}`);
+  const hdr  = document.getElementById(`hdr-${id}`);
+  tree.classList.toggle('collapsed');
+  hdr.classList.toggle('collapsed');
+}
+
+function toggleMeta(id) {
+  const el  = document.getElementById(`meta-${id}`);
+  const btn = document.getElementById(`metabtn-${id}`);
+  el.classList.toggle('collapsed');
+  btn.classList.toggle('collapsed');
+}
+
+function renderSidebar(groups) {
+  const byId = Object.fromEntries(groups.map(g => [g.id, g]));
+
+  // ── Fisiopatología tree ──────────────────────────────
+  const fisioEl = document.getElementById('tree-fisiopa');
+  fisioEl.innerHTML = HIERARCHY_FISIOPA.map(section => {
+    const children = section.groups
+      .filter(gid => byId[gid] && byId[gid].gene_count > 0)
+      .map(gid => groupBtn(byId[gid])).join('');
+    if (!children) return '';
+    return `
+      <div class="meta-group" id="metabtn-${section.id}" onclick="toggleMeta('${section.id}')">
+        <span>${section.label}</span><span class="toggle">▾</span>
+      </div>
+      <div class="meta-children sidebar-tree" id="meta-${section.id}">${children}</div>`;
+  }).join('');
+
+  // ── Clínica — misma lógica que fisiopa, con sub-secciones ──
+  const clinicaEl = document.getElementById('tree-clinica');
+  clinicaEl.innerHTML = HIERARCHY_CLINICA.map(section => {
+    const children = section.groups
+      .filter(item => byId[item.id] && byId[item.id].gene_count > 0)
+      .map(item => groupBtn(byId[item.id], item.label)).join('');
+    if (!children) return '';
+    return `
+      <div class="meta-group" id="metabtn-${section.id}" onclick="toggleMeta('${section.id}')">
+        <span>${section.label}</span><span class="toggle">▾</span>
+      </div>
+      <div class="meta-children sidebar-tree" id="meta-${section.id}">${children}</div>`;
+  }).join('');
+
+  // ── Todos los grupos ─────────────────────────────────
+  const todosEl = document.getElementById('tree-grupos');
+  todosEl.innerHTML = [...groups]
+    .sort((a,b) => a.label.localeCompare(b.label, 'es'))
+    .map(g => groupBtn(g)).join('');
+
+  // Clínica empieza colapsada
+  document.getElementById('tree-clinica').classList.remove('collapsed');
+  document.getElementById('tree-grupos').classList.add('collapsed');
+  document.getElementById('hdr-grupos').classList.add('collapsed');
+}
+
+function groupBtn(g, labelOverride) {
+  if (!g) return '';
+  const label = labelOverride || `${groupIcon(g.id)} ${g.label}`;
+  return `<button class="group-btn" id="grpBtn-${g.id}" onclick="loadGroup('${g.id}')">
+    <span>${label}</span><span class="cnt">${g.gene_count}</span>
+  </button>`;
+}
+
+function groupIcon(id) {
+  const icons = {
+    channelopathy:'⚡', dee:'🧠', rasopathy:'📡', mtoropathy:'🎯',
+    cohesinopathy:'🔗', microtubulipathy:'🌀', chromatin_remodeling:'🧩',
+    transcription_factor:'📝', synaptopathy:'🔌', mitochondrial:'⚙️',
+    metabolic:'🧪', leukodystrophy:'⬜', dna_repair:'🔧', ciliopathy:'🔬',
+    other_ndd:'📦', transportopathy:'🚌', interferonopathy:'🛡️',
+    autoinflammatory_cns:'🔥', complement_neuro:'🧬',
+    neurotransmitter_defect:'⚗️', nt_synthesis:'🏭', nt_vesicle:'📦',
+    nt_reuptake:'♻️', nt_catabolism:'🗑️', cofactor_nt:'💊',
+    gaba_metabolism:'🟢', nkh:'🔵', purine_metabolism:'🟤',
+    organic_acidemia:'🟠', lysosomal:'🏮', peroxisomal:'⭕',
+    cdg:'🍬', creatine_disorder:'💪',
+    dystonia:'🔄', parkinsonism_early:'⚙️', ataxia:'🌀',
+    spastic_paraplegia:'⬆️', xlid:'🔵', id_nonsyndromic:'🟣',
+    microcephaly:'🔵', autism_specific:'🟡', neuromuscular:'💪',
+  };
+  return icons[id] || '•';
+}
+
+// ── SVG pathway map ──────────────────────────────────────
+const SVG_MAP = {
+  channelopathy:         'channelopathy.svg',
+  transportopathy:       'transportopathy.svg',
+  neurotransmitter_defect: 'nt_synthesis.svg',
+  nt_synthesis:          'nt_synthesis.svg',
+  nt_vesicle:            'nt_synthesis.svg',
+  nt_reuptake:           'nt_synthesis.svg',
+  nt_catabolism:         'nt_synthesis.svg',
+  cofactor_nt:           'nt_synthesis.svg',
+  gaba_metabolism:       'nt_synthesis.svg',
+  nkh:                   'nt_synthesis.svg',
+  mitochondrial:         'mitochondrial.svg',
+  lysosomal:             'lysosomal.svg',
+  peroxisomal:           'peroxisomal.svg',
+  organic_acidemia:      'organic_acid.svg',
+  purine_metabolism:     'purine.svg',
+  creatine_disorder:     'creatine.svg',
+  rasopathy:             'rasopathy.svg',
+  cohesin_related:       'cohesin.svg',
+  tubulin_related:       'tubulin.svg',
+  chromatin_related:     'chromatin.svg',
+  transcription_factor:  'transcription.svg',
+  xlid:                  'xlid.svg',
+  id_syndromic:          'id_syndromic.svg',
+  id_nonsyndromic:       'id_nonsyndromic.svg',
+  microcephaly_primary:  'microcephaly.svg',
+  autism_specific:       'autism.svg',
+  other_ndd:            'other_ndd.svg',
+  dee:                  'dee.svg',
+  dystonia_primary:     'dystonia.svg',
+  mtoropathy:           'mtor.svg',
+  interferonopathy:     'interferonopathy.svg',
+  autoinflammatory_cns: 'interferonopathy.svg',
+  synapse_disorder:     'synapse.svg',
+  ciliopathy:           'cilium.svg',
+  muscular_dystrophy:   'dystrophin.svg',
+  congenital_md:        'dystrophin.svg',
+  congenital_myopathy:  'congenital_myopathy.svg',
+  myopathy_metabolic:   'myopathy.svg',
+  genetic_neuropathy:   'cmt.svg',
+  neuromuscular:        'neuromuscular.svg',
+  metabolic_other:      'metabolic.svg',
+  cdg:                  'cdg.svg',
+  leukodystrophy:       'leukodystrophy.svg',
+};
+
+// ── Load single gene card ─────────────────────────────────
+async function loadGene(symbol) {
+  const mc = document.getElementById('mainContent');
+  // preserve scroll position of current group header if exists
+  mc.innerHTML = `<div class="loading"><div class="spinner"></div><br>Cargando ${symbol}…</div>`;
+  try {
+    const g = await fetch(`${API}/api/genes/${symbol}`).then(r => r.json());
+    mc.innerHTML = `
+      <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+        <button class="btn btn-secondary" style="font-size:0.75rem;padding:5px 12px;"
+          onclick="history.back(); renderOverview()">← Volver</button>
+        <span style="color:var(--muted);font-size:0.82rem;">Ficha de gen</span>
+      </div>
+      ${renderGeneCard(g)}`;
+  } catch(e) {
+    mc.innerHTML = `<div class="empty"><h3>Gen no encontrado</h3><p>${symbol}</p></div>`;
+  }
+}
+
+// ── Make SVG gene labels interactive ─────────────────────
+function makeGenesClickable(container) {
+  // Build set of all known gene symbols (uppercase)
+  const geneSet = new Set(allGenes.map(g => g.symbol.toUpperCase()));
+
+  // Walk every text / tspan element in the inline SVG
+  container.querySelectorAll('text, tspan').forEach(el => {
+    const raw = el.textContent.trim();
+    // Strip common suffixes like ↓ ↑ * and surrounding parens
+    const symbol = raw.replace(/[↓↑*()]/g, '').replace(/\s.*/,'').trim().toUpperCase();
+    if (symbol.length >= 2 && geneSet.has(symbol)) {
+      el.classList.add('gene-label-clickable');
+      el.setAttribute('title', `Ver ficha: ${symbol}`);
+      // Make the fill stand out as accent
+      el.style.fill = '#6c8fff';
+      el.style.fontWeight = '700';
+      el.style.textDecoration = 'underline';
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        loadGene(symbol);
+      });
+    }
+  });
+}
+
+// ── Show pathway SVG for a group ─────────────────────────
+async function showPathwaySVG(groupId) {
+  const svgFile = SVG_MAP[groupId];
+  const wrap = document.getElementById('pathwayWrap');
+  if (!wrap) return;
+  if (!svgFile) { wrap.style.display = 'none'; return; }
+
+  try {
+    const res = await fetch(`/diagrams/${svgFile}?v=20260602210700`);
+    if (!res.ok) throw new Error('not found');
+    const svgText = await res.text();
+    wrap.style.display = '';
+    wrap.innerHTML = svgText +
+      `<p class="svg-caption">Haz clic sobre cualquier gen subrayado para abrir su ficha clínica</p>`;
+    makeGenesClickable(wrap);
+  } catch {
+    wrap.style.display = 'none';
+  }
+}
+function showView(view) {
+  currentView = view;
+  document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
+  if (view === 'overview') renderOverview();
+}
+
+async function renderOverview() {
+  const stats = await fetch(`${API}/api/stats`).then(r => r.json());
+  if (!allGenes.length) {
+    allGenes = await fetch(`${API}/api/genes`).then(r => r.json()).catch(() => []);
+    buildGeneIndex();
+  }
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <!-- Stats rápidas -->
+    <div class="home-stats">
+      <div class="stat-card"><div class="stat-num">${stats.total_genes}</div><div class="stat-label">Genes en el panel</div></div>
+      <div class="stat-card"><div class="stat-num">${allGroups.filter(g=>g.gene_count>0).length}</div><div class="stat-label">Grupos de enfermedad</div></div>
+      <div class="stat-card" style="cursor:pointer" onclick="filterTreatable()">
+        <div class="stat-num" style="color:var(--green)">${allGenes.filter(g=>g.treatable).length || '?'}</div>
+        <div class="stat-label">Genes tratables ✓</div>
+      </div>
+      <div class="stat-card"><div class="stat-num">${stats.panel_version}</div><div class="stat-label">Versión</div></div>
+    </div>
+
+    <!-- Búsqueda libre -->
+    <div class="home-search-bar">
+      <input type="text" id="symFreeSearch" placeholder="🔍  Buscar síntoma, gen, síndrome…" oninput="onFreeSearch(this.value)">
+    </div>
+
+    <!-- Pestañas filtro -->
+    <div class="sym-tabs">
+      <span class="sym-tab active" id="tabAll"     onclick="switchSymTab('all')">Todos los síntomas</span>
+      <span class="sym-tab"        id="tabNeuro"   onclick="switchSymTab('neuro')">🧠 Neurológicos</span>
+      <span class="sym-tab"        id="tabExtra"   onclick="switchSymTab('extra')">🫀 Extraneurológicos</span>
+      <span class="sym-tab treatable" id="tabTreat" onclick="switchSymTab('treat')">💊 Tratables</span>
+    </div>
+
+    <!-- Chips de síntomas neurológicos -->
+    <div class="sym-section" id="secNeuro">
+      <h3>🧠 Síntomas Neurológicos</h3>
+      <div class="sym-chips" id="chipsNeuro"></div>
+    </div>
+
+    <!-- Chips extraneurológicos -->
+    <div class="sym-section" id="secExtra">
+      <h3>🫀 Manifestaciones Extraneurológicas</h3>
+      <div class="sym-chips" id="chipsExtra"></div>
+    </div>
+
+    <!-- Chips tratabilidad -->
+    <div class="sym-section" id="secTreat">
+      <h3>💊 Filtros de Tratabilidad</h3>
+      <div class="sym-chips" id="chipsTreat"></div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="sym-results" id="symResults"></div>
+  `;
+
+  buildSymptomChips();
+  switchSymTab('all');
+}
+
+// ── Normalización de texto (elimina acentos, minúsculas) ─────────────────────
+function norm(s) {
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ');
+}
+
+// ── Mapa grupo → términos clínicos en español ─────────────────────────────────
+// Permite que chips en español encuentren genes aunque sus datos estén en inglés
+const GROUP_TERMS = {
+  dee:                  'epilepsia encefalopatia epileptica espasmos infantiles crisis convulsiones dravet lennox west rett',
+  channelopathy:        'epilepsia canalopatia canal ionico migraña ataxia paroxistico paralisis arritmia',
+  ataxia:               'ataxia cerebelosa inestabilidad marcha disartria nistagmo temblor espinocerebelosa',
+  dystonia:             'distonia movimientos involuntarios torsion dyt escritura calambre',
+  parkinsonism_early:   'parkinsonismo bradicinesia rigidez temblor reposo parkinson juvenil',
+  spastic_paraplegia:   'paraparesia espastica espasticidad debilidad piernas marcha espastica',
+  muscular_dystrophy:   'distrofia muscular debilidad muscular duchenne becker miotonia pseudohipertrofia',
+  congenital_md:        'distrofia muscular congenita hipotonía merosin fukuyama walker warburg',
+  metabolic_myopathy:   'miopatia metabolica debilidad muscular intolerancia al ejercicio calambres glucogenosis pompe',
+  congenital_myopathy:  'miopatia congenita hipotonía central core nemaline miotubular centronuclear',
+  genetic_neuropathy:   'neuropatia periferica charcot marie tooth atrofia muscular distal pie cavo',
+  neuromuscular:        'debilidad muscular hipotonía atrofia muscular motoneurona amiotrofia',
+  mitochondrial:        'mitocondrial acidosis lactica encefalomiopatia melas stroke like oftalmoplegia ptosis',
+  lysosomal:            'lisosomial deposito gaucher niemann pick hunter hurler fabry pompe esfingolipidosis',
+  peroxisomal:          'peroxisomal zellweger adrenoleucodistrofia refsum aciduria fitanica',
+  leukodystrophy:       'leucodistrofia desmielinizacion sustancia blanca mielina ald pelizaeus krabbe',
+  rasopathy:            'rasopatia noonan cardiopatia leopard cfc costello neurofibromatosis manchas cafe leche',
+  mtoropathy:           'esclerosis tuberosa hamartomas angiofibromas manchas en ceniza everolimus',
+  interferonopathy:     'interferon aicardi goutieres calcificaciones basales ganglios espasticidad leucodistrofia',
+  autoinflammatory_cns: 'autoinflamatorio vasculitis fiebre periodica angiitis dada2 caps',
+  id_syndromic:         'discapacidad intelectual sindromica dismorfias cardiopatia sindrome',
+  id_nonsyndromic:      'discapacidad intelectual no sindromica retraso mental sin dismorfias',
+  xlid:                 'discapacidad intelectual ligada al x fragile x rett',
+  microcephaly:         'microcefalia cabeza pequeña perimetro cefalico reducido',
+  autism_specific:      'autismo tea trastorno espectro autista comunicacion social',
+  dee:                  'epilepsia encefalopatia espasmos infantiles crisis refractaria',
+  neurotransmitter_defect: 'deficit neurotransmisor dopamina serotonina movimientos oculogiros crisis',
+  nt_synthesis:         'deficit dopamina crisis oculogiras hipotonia ptosis dopamina serotonina',
+  cofactor_nt:          'bh4 piridoxina folato cerebral vitamina b6 convulsiones tratables',
+  organic_acidemia:     'acidemia organica acidosis cetotica propionico metilmalonico isovalerico amonio',
+  cdg:                  'glicosilacion congenita trastorno hipotonia cerebeloso ataxia retraso',
+  creatine_disorder:    'creatina trastorno creatina muscular lenguaje retraso',
+  cohesinopathy:        'cornelia de lange retraso crecimiento microcefalia hirsutismo extremidades',
+  microtubulipathy:     'lissencefalia paquigiria polimicrogiria heterotopia tubulinopia cobblestone',
+  synaptopathy:         'sinapsis sinaptopaty shank nrxn nlgn syngap psd autismo epilepsia',
+  ciliopathy:           'ciliopatia riñon ojo cerebelo joubert bardet biedl nefronoptisis',
+  dna_repair:           'inestabilidad genomica ataxia telangiectasia xeroderma cockayne reparacion dna',
+  repeat_expansion:     'expansion repeticiones triplete str fragil x friedreich distrofia miotonica sca',
+  imprinting_epigenetic:'imprinting epigenetica prader willi angelman beckwith wiedemann ubd metilacion',
+  genomic_cnv:          'delecion duplicacion cnv microarray 22q11 williams digeorge smith magenis',
+  migraine:             'migraña cefalea migraña hemiplegica aura cefalea episodica',
+  cerebrovascular:      'ictus stroke avc hemorragia cerebral cavernoma cadasil moyamoya angioma',
+  paroxysmal:           'paroxistico discinesia paroxistica ataxia episodica hemiplejia alternante',
+  epi_familial:         'epilepsia familiar benigna neonatal infantil febril kcnq2 prrt2 gefs',
+  epi_generalized:      'epilepsia generalizada jme ausencia mioclonica tonica clonica',
+  epi_focal:            'epilepsia focal rolandica lte nocturna frontal temporal depdc5 grin2a',
+  epi_pme:              'epilepsia mioclonica progresiva lafora unverricht ncl lipofuscinosis cstb',
+};
+
+// ── Mapa clinical_label → términos español ────────────────────────────────────
+const CLABEL_TERMS = {
+  epilepsy:            'epilepsia convulsiones crisis',
+  dee:                 'encefalopatia epileptica espasmos dravet lennox',
+  intellectual_disability: 'discapacidad intelectual retraso mental di',
+  autism:              'autismo tea espectro autista',
+  movement_disorder:   'trastorno movimiento distonia ataxia corea parkinson',
+  neuromuscular:       'neuromuscular debilidad muscular neuropatia',
+  dystrophy:           'distrofia muscular miopatia',
+  ataxia:              'ataxia cerebelosa',
+  leukodystrophy:      'leucodistrofia desmielinizacion',
+  metabolic:           'metabolico error innato metabolismo',
+  lysosomal:           'lisosomal deposito',
+  peroxisomal:         'peroxisomal adrenoleucodistrofia',
+  mitochondrial:       'mitocondrial acidosis lactica',
+};
+
+// ── Índice de búsqueda enriquecido ────────────────────────────────────────────
+let geneSearchIndex = [];   // [{gene, blob, score}]
+
+function buildGeneIndex() {
+  geneSearchIndex = allGenes.map(g => {
+    const groupTerms = (g.mechanism_groups || [])
+      .map(gid => (GROUP_TERMS[gid] || '') + ' ' + (allGroups.find(ag => ag.id === gid)?.label || ''))
+      .join(' ');
+    const clabelTerms = (g.clinical_labels || [])
+      .map(l => (CLABEL_TERMS[l] || l)).join(' ');
+    const blob = norm([
+      g.symbol, g.name,
+      ...(g.phenotypes || []),
+      ...(g.symptoms || []),
+      ...(g.interpretation_notes || []),
+      clabelTerms,
+      groupTerms,
+    ].join(' '));
+    return { gene: g, blob };
+  });
+}
+
+// Detectar si un gen tiene tratamiento disponible
+function isTreatable(g) {
+  const treatKeywords = ['tratamiento','tratable','ERT','piridoxina','BH4','sapropterina',
+    'folinato','riboflavina','biotina','tiamina','cobalamina','dieta','acetazolamida',
+    'everolimus','vigabatrina','ACTH','nusinersen','risdiplam','zolgensma','migalastat',
+    'eliglustat','omaveloxolona','trasplante','hormona de crecimiento','calcio'];
+  const blob = [...(g.interpretation_notes||[]),...(g.phenotypes||[])].join(' ').toLowerCase();
+  const treatGroups = ['cofactor_nt','nt_synthesis','creatine_disorder','metabolic_myopathy',
+    'lysosomal','organic_acidemia','cdg','peroxisomal'];
+  return treatKeywords.some(k => blob.includes(k.toLowerCase())) ||
+         (g.mechanism_groups||[]).some(mg => treatGroups.includes(mg));
+}
+
+// Búsqueda por términos usando el índice normalizado
+// Usa los primeros 5 caracteres como stem para fuzzy matching
+function stemMatch(blob, term) {
+  const t = norm(term);
+  if (blob.includes(t)) return true;
+  // Stem: palabras del término con >5 chars
+  return t.split(/\s+/).filter(w => w.length > 4).some(w => blob.includes(w.slice(0,5)));
+}
+
+// ── Síntomas y etiquetas curadas ─────────────────────────────────────────────
+const NEURO_SYMPTOMS = [
+  "epilepsia","encefalopatía epiléptica","espasmos infantiles","convulsiones febriles plus",
+  "ataxia","ataxia cerebelosa","ataxia episódica",
+  "distonía","corea","temblor","parkinsonismo",
+  "hipotonía","espasticidad","paraparesia espástica",
+  "discapacidad intelectual","discapacidad intelectual grave","retraso psicomotor",
+  "autismo","TEA","regresión neurológica",
+  "microcefalia","macrocefalia",
+  "leucodistrofia","desmielinización",
+  "neuropatía periférica","neuropatía sensitiva",
+  "debilidad muscular","miotonía","miopatía",
+  "lissencefalia","polimicrogiria","heterotopía",
+  "hidrocefalia","agenesia cuerpo calloso",
+  "nistagmo","oftalmoplejía","ptosis",
+  "disartria","disfagia",
+  "ausencia de habla","regresión del lenguaje",
+  "deterioro cognitivo","demencia",
+  "movimientos estereotipados","autolesión",
+  "hipersomnia","trastorno del sueño","inversión ciclo sueño-vigilia",
+  "disfunción autonómica","CCHS","hipoventilación",
+  "ALS / ELA","motoneurona",
+  "stroke-like / ictus","hemorragia cerebral",
+  "migraña","cefalea hemipléjica",
+  "paroxístico","discinesia paroxística",
+];
+
+const EXTRA_SYMPTOMS = [
+  "cardiopatía congénita","cardiomiopatía hipertrófica","arritmia","estenosis aórtica supravalvular",
+  "hipoglucemia neonatal","hipocalcemia","diabetes neonatal","diabetes mellitus","hipotiroidismo",
+  "obesidad","hiperfagia","restricción crecimiento intrauterino","baja talla",
+  "hepatomegalia","hepatopatía","tubulopatía renal","síndrome nefrótico",
+  "contracturas articulares","escoliosis","pie cavo","braquidactilia","costillas en campana",
+  "calcificaciones subcutáneas","angiofibromas","manchas café con leche","despigmentación",
+  "inmunodeficiencia","infecciones recurrentes","vasculitis","lupus","interferón elevado",
+  "cataratas","retinitis pigmentosa","degeneración macular","pérdida de visión",
+  "tumor de Wilms","neuroblastoma","hepatoblastoma","hamartomas",
+  "macroglosia","onfalocele","hemihipertrofia","macrosomía",
+  "dismorfias faciales","paladar hendido","macroorquidismo",
+  "Hirschsprung","acidosis","acidemia orgánica",
+  "insuficiencia respiratoria","apneas del sueño","tos crónica",
+  "sordera / hipoacusia","ferritina elevada","cavernoma cerebral",
+];
+
+const TREAT_TAGS = [
+  "vitamina B6 / piridoxina","BH4 / sapropterina","dieta sin fenilalanina",
+  "dieta cetogénica","restricción proteica","folinato / ácido folínico",
+  "riboflavina","biotina","tiamina","cobalamina",
+  "acetazolamida","quinina / mexiletina",
+  "ERT (enzima recombinante)","migalastat","eliglustat","omaveloxolona",
+  "everolimus / mTOR","vigabatrina","ACTH / corticoides",
+  "hormona de crecimiento","nusinersen / risdiplam / zolgensma",
+  "trasplante de médula ósea","trasplante hepático",
+  "evitar succinilcolina (MH)","evitar anestesia volátil (MH)",
+  "evitar bloqueantes Na","melatonina nocturna",
+];
+
+let activeSymptoms = new Set();
+let currentSymTab = 'all';
+
+function buildSymptomChips() {
+  const neuroEl = document.getElementById('chipsNeuro');
+  const extraEl = document.getElementById('chipsExtra');
+  const treatEl = document.getElementById('chipsTreat');
+  if (!neuroEl) return;
+  neuroEl.innerHTML = NEURO_SYMPTOMS.map(s =>
+    `<span class="sym-chip" onclick="toggleSymptom(this,'${s.replace(/'/g,"\\'")}','neuro')">${s}</span>`
+  ).join('');
+  extraEl.innerHTML = EXTRA_SYMPTOMS.map(s =>
+    `<span class="sym-chip non-neuro" onclick="toggleSymptom(this,'${s.replace(/'/g,"\\'")}','extra')">${s}</span>`
+  ).join('');
+  treatEl.innerHTML = TREAT_TAGS.map(s =>
+    `<span class="sym-chip treatable-tag" onclick="toggleSymptom(this,'${s.replace(/'/g,"\\'")}','treat')">${s}</span>`
+  ).join('');
+}
+
+function switchSymTab(tab) {
+  currentSymTab = tab;
+  ['all','neuro','extra','treat'].forEach(t => {
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1))?.classList.toggle('active', t===tab);
+  });
+  document.getElementById('secNeuro')?.style.setProperty('display', (tab==='all'||tab==='neuro') ? '' : 'none');
+  document.getElementById('secExtra')?.style.setProperty('display', (tab==='all'||tab==='extra') ? '' : 'none');
+  document.getElementById('secTreat')?.style.setProperty('display', (tab==='all'||tab==='treat') ? '' : 'none');
+  if (tab === 'treat') filterTreatable();
+}
+
+function toggleSymptom(el, sym) {
+  if (activeSymptoms.has(sym)) { activeSymptoms.delete(sym); el.classList.remove('active'); }
+  else                         { activeSymptoms.add(sym);    el.classList.add('active'); }
+  runSymptomSearch();
+}
+
+function clearSymptoms() {
+  activeSymptoms.clear();
+  document.querySelectorAll('.sym-chip.active').forEach(el => el.classList.remove('active'));
+  document.getElementById('symResults').innerHTML = '';
+  const inp = document.getElementById('symFreeSearch');
+  if (inp) inp.value = '';
+}
+
+function onFreeSearch(q) {
+  if (!q.trim()) { document.getElementById('symResults').innerHTML = ''; return; }
+  const qn = norm(q);
+  const hits = geneSearchIndex
+    .filter(({blob}) => qn.split(/\s+/).every(w => w.length < 3 || blob.includes(w)))
+    .map(({gene}) => gene);
+  renderSymResults(hits, `"${q}"`, [norm(q)]);
+}
+
+function filterTreatable() {
+  const hits = allGenes.filter(isTreatable);
+  renderSymResults(hits, `tratables (${hits.length})`, []);
+}
+
+function runSymptomSearch() {
+  if (!activeSymptoms.size) { document.getElementById('symResults').innerHTML = ''; return; }
+  const terms = [...activeSymptoms];
+  // Score cada gen por nº de chips que hace match
+  const scored = geneSearchIndex.map(({gene, blob}) => {
+    const score = terms.filter(t => stemMatch(blob, t)).length;
+    return { gene, score };
+  }).filter(({score}) => score > 0);
+  scored.sort((a,b) => b.score - a.score);
+  renderSymResults(scored.map(x => x.gene), terms.join(' + '), terms.map(norm));
+}
+
+function renderSymResults(hits, label, matchTerms) {
+  const el = document.getElementById('symResults');
+  if (!el) return;
+  if (!hits.length) {
+    el.innerHTML = `<div class="empty" style="padding:30px 0"><p style="color:var(--muted)">Sin resultados para <b style="color:var(--text)">${label}</b></p></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="sym-result-header">
+      <h3>${hits.length} gen${hits.length>1?'es':''} — <span style="color:var(--muted);font-weight:400">${label}</span></h3>
+      <button class="clear-btn" onclick="clearSymptoms()">✕ Limpiar</button>
+    </div>
+    <div class="gene-result-grid">
+      ${hits.slice(0,120).map(g => {
+        const treat = isTreatable(g) ? `<span class="tag treat">💊 tratable</span>` : '';
+        const groups = (g.mechanism_groups||[]).slice(0,2)
+          .map(gid => { const ag=allGroups.find(x=>x.id===gid); return ag?`<span class="tag">${ag.label}</span>`:''; }).join('');
+        const phenos = (g.phenotypes||[]).slice(0,1)
+          .map(p => `<span class="tag match">${p.replace(/\s*\(OMIM.*?\)/,'').slice(0,50)}</span>`).join('');
+        return `
+          <div class="gene-result-card" onclick="loadGene('${g.symbol}')">
+            <div class="sym">${g.symbol}</div>
+            <div class="name">${(g.name||'').slice(0,55)}</div>
+            <div class="tags">${treat}${phenos}${groups}</div>
+          </div>`;
+      }).join('')}
+    </div>
+    ${hits.length>120 ? `<p style="color:var(--muted);font-size:0.78rem;margin-top:12px;text-align:center">Mostrando 120 de ${hits.length} — añade más filtros para precisar</p>` : ''}
+  `;
+}
+
+// ── Group view ────────────────────────────────────────────
+async function loadGroup(groupId) {
+  currentGroup = groupId;
+  document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById(`grpBtn-${groupId}`);
+  if (btn) btn.classList.add('active');
+
+  document.getElementById('mainContent').innerHTML = `<div class="loading"><div class="spinner"></div><br>Cargando genes…</div>`;
+
+  // Pre-fetch allGenes si aún no está cargado (necesario para makeGenesClickable)
+  if (!allGenes.length) {
+    allGenes = await fetch(`${API}/api/genes`).then(r => r.json()).catch(() => []);
+    buildGeneIndex();
+  }
+
+  const data = await fetch(`${API}/api/groups/${groupId}`).then(r => r.json());
+  const mc = document.getElementById('mainContent');
+
+  if (!data.genes || !data.genes.length) {
+    mc.innerHTML = `<div class="empty"><h3>${groupIcon(groupId)} ${data.label}</h3><p>${data.description || ''}</p></div>`;
+    return;
+  }
+
+  mc.innerHTML = `
+    <div style="margin-bottom:18px;">
+      <h2 style="font-size:1.1rem; margin-bottom:4px;">${groupIcon(groupId)} ${data.label}</h2>
+      <p style="color:var(--muted);font-size:0.82rem;">${data.description || ''}</p>
+    </div>
+    <div id="pathwayWrap" class="pathway-wrap"></div>
+    ${data.genes.map(g => renderGeneCard(g)).join('')}
+  `;
+
+  // Cargar SVG de fisiopatología si existe para este grupo
+  showPathwaySVG(groupId);
+}
+
+// ── Gene search ───────────────────────────────────────────
+async function searchGenes(q) {
+  const genes = await fetch(`${API}/api/genes?q=${encodeURIComponent(q)}`).then(r => r.json());
+  renderGeneList(genes, `Resultados: "${q}"`, `${genes.length} gene(s) encontrado(s)`);
+}
+
+// ── Render gene list ──────────────────────────────────────
+function renderGeneList(genes, title, subtitle) {
+  const mc = document.getElementById('mainContent');
+  if (!genes.length) {
+    mc.innerHTML = `<div class="empty"><h3>${title}</h3><p>${subtitle}</p></div>`;
+    return;
+  }
+  mc.innerHTML = `
+    <div style="margin-bottom:18px;">
+      <h2 style="font-size:1.1rem; margin-bottom:4px;">${title}</h2>
+      <p style="color:var(--muted);font-size:0.82rem;">${subtitle}</p>
+    </div>
+    ${genes.map(g => renderGeneCard(g)).join('')}
+  `;
+}
+
+function renderGeneCard(g) {
+  const mechColor = g.mechanism.includes('gain_of_function') && g.mechanism.includes('loss_of_function')
+    ? 'mech-dual' : g.mechanism.includes('gain_of_function') ? 'mech-gof' : 'mech-lof';
+  const mechLabel = g.mechanism.includes('gain_of_function') && g.mechanism.includes('loss_of_function')
+    ? '⚠️ GoF + LoF (DUAL)' : g.mechanism.includes('gain_of_function') ? '↑ Ganancia de función (GoF)' : '↓ Pérdida de función (LoF)';
+
+  const clingenBadge = g.clingen && g.clingen.gene_validity
+    ? `<span class="clingen">✓ ClinGen ${g.clingen.gene_validity}</span>` : '';
+
+  const hotspots = g.hotspots && g.hotspots.length ? `
+    <details>
+      <summary>🎯 Hotspots conocidos (${g.hotspots.length})</summary>
+      <div style="margin-top:8px;">
+        ${g.hotspots.map(h => `
+          <div class="hotspot">
+            <span class="hp">${h.hgvs_p || ''}</span>
+            ${h.significance ? `<span style="color:var(--muted)"> · ${h.significance}</span>` : ''}
+            ${h.phenotype ? `<span style="color:var(--text)"> · ${h.phenotype}</span>` : ''}
+            ${h.pmid ? `<a href="https://pubmed.ncbi.nlm.nih.gov/${h.pmid}" target="_blank" class="ext-link" style="margin-left:6px;">PMID:${h.pmid}</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </details>` : '';
+
+  const notes = g.interpretation_notes && g.interpretation_notes.length ? `
+    <details>
+      <summary>💡 Notas de interpretación (${g.interpretation_notes.length})</summary>
+      <ul class="notes-list" style="margin-top:8px;">
+        ${g.interpretation_notes.map(n => {
+          const isCrit = n.includes('CRÍTICO') || n.includes('CONTRAINDICADO');
+          const isWarn = n.includes('Cuidado') || n.includes('⚠️') || n.includes('No ');
+          return `<li class="${isCrit ? 'crit' : isWarn ? 'warn' : ''}">${n}</li>`;
+        }).join('')}
+      </ul>
+    </details>` : '';
+
+  const acmg = g.acmg_guidance && g.acmg_guidance.length ? `
+    <details>
+      <summary>📋 Guía ACMG gene-específica (${g.acmg_guidance.length} criterios)</summary>
+      <div style="margin-top:8px;">
+        ${g.acmg_guidance.map(a => `
+          <div class="acmg-row">
+            <span class="acmg-crit">${a.criterion}</span>
+            <span style="color:var(--muted);font-size:0.78rem;">${a.note}</span>
+          </div>
+        `).join('')}
+      </div>
+    </details>` : '';
+
+  const links = g.links ? `
+    <div class="link-row">
+      ${g.links.reev ? `<a href="${g.links.reev}" target="_blank" class="ext-link primary">REEV</a>` : ''}
+      ${g.links.protein_viewer ? `<a href="${g.links.protein_viewer}" target="_blank" class="ext-link">🧬 Estructura 3D</a>` : ''}
+      ${g.links.gnomad ? `<a href="${g.links.gnomad}" target="_blank" class="ext-link">gnomAD</a>` : ''}
+      ${g.links.clinvar ? `<a href="${g.links.clinvar}" target="_blank" class="ext-link">ClinVar</a>` : ''}
+      ${g.links.uniprot ? `<a href="${g.links.uniprot}" target="_blank" class="ext-link">UniProt</a>` : ''}
+      ${g.links.alphafold ? `<a href="${g.links.alphafold}" target="_blank" class="ext-link">AlphaFold</a>` : ''}
+      ${g.links.omim ? `<a href="${g.links.omim}" target="_blank" class="ext-link">OMIM</a>` : ''}
+    </div>` : '';
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="gene-symbol">${g.symbol} ${clingenBadge}</div>
+          <div class="gene-name">${g.name}</div>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+          <span class="${mechColor}" style="font-size:0.78rem;font-weight:700;">${mechLabel}</span>
+        </div>
+      </div>
+
+      <div class="tags">
+        ${g.mechanism_groups.map(m => `<span class="tag tag-group">${groupIcon(m)} ${m}</span>`).join('')}
+        ${g.clinical_labels.map(l => `<span class="tag tag-label">${l}</span>`).join('')}
+        ${g.inheritance.map(i => `<span class="tag tag-inh">${i}</span>`).join('')}
+      </div>
+
+      ${g.phenotypes && g.phenotypes.length ? `
+        <div style="margin:10px 0;font-size:0.8rem;color:var(--muted);">
+          <strong style="color:var(--text);">Fenotipos:</strong>
+          <ul style="margin-top:4px;padding-left:16px;">
+            ${g.phenotypes.map(p => `<li style="margin-bottom:3px;">${p}</li>`).join('')}
+          </ul>
+        </div>` : ''}
+
+      ${hotspots}
+      ${notes}
+      ${acmg}
+      ${links}
+
+    </div>`;
+}
+
+init();
+</script>
+</body>
+</html>

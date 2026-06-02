@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-label="Acidemias Orgánicas - Metabolismo de Aminoácidos de Cadena Ramificada" preserveAspectRatio="xMidYMid meet" width="100%" height="auto">
+  <title>Acidemias Orgánicas - Metabolismo de Aminoácidos de Cadena Ramificada</title>
+  <desc>Diagrama interactivo del metabolismo de aminoácidos de cadena ramificada (BCAA) y acidemias orgánicas - NeuropedGx Hub</desc>
+  <defs>
+    <marker id="arrowBlue" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#6c8fff"/></marker>
+    <marker id="arrowGreen" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#34d399"/></marker>
+    <marker id="arrowRed" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#f87171"/></marker>
+    <marker id="arrowOrange" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#fb923c"/></marker>
+    <linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d2236"/><stop offset="100%" stop-color="#131724"/></linearGradient>
+    <style>
+      text { font-family: Inter, system-ui, sans-serif; }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="900" height="520" fill="#0f1117"/>
+  <text x="36" y="42" font-size="26" font-weight="800" fill="#f8fafc" text-anchor="start">Acidemias Orgánicas — BCAA y β-oxidación</text>
+  <text x="36" y="67" font-size="13" font-weight="500" fill="#94a3b8" text-anchor="start">NeuropedGx Hub · Diagrama biomédico</text>
+  <rect x="34" y="84" width="832" height="398" rx="12" fill="url(#panelGlow)" stroke="#2e3250" stroke-width="1"/>
+  <text x="82" y="120" font-size="11" font-weight="800" fill="#94a3b8" text-anchor="start">AMINOÁCIDOS DE CADENA RAMIFICADA (BCAA)</text>
+  <circle cx="110" cy="160" r="18" fill="#6c8fff" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/><text x="110" y="166" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">LEU</text>
+  <circle cx="180" cy="160" r="18" fill="#6c8fff" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/><text x="180" y="166" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">ILE</text>
+  <circle cx="250" cy="160" r="18" fill="#6c8fff" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/><text x="250" y="166" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">VAL</text>
+  <line x1="110" y1="178" x2="110" y2="210" stroke="#6c8fff" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+  <line x1="180" y1="178" x2="180" y2="210" stroke="#6c8fff" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+  <line x1="250" y1="178" x2="250" y2="210" stroke="#6c8fff" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowBlue)"/>
+  <rect x="82" y="212" width="62" height="28" rx="8" fill="#34d399" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/><text x="113" y="232" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">BCKDC</text>
+  <rect x="152" y="212" width="62" height="28" rx="8" fill="#34d399" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/><text x="183" y="232" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">BCKDC</text>
+  <rect x="222" y="212" width="62" height="28" rx="8" fill="#34d399" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/><text x="253" y="232" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">BCKDC</text>
+  <line x1="113" y1="240" x2="113" y2="270" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowGreen)"/>
+  <line x1="183" y1="240" x2="183" y2="270" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowGreen)"/>
+  <line x1="253" y1="240" x2="253" y2="270" stroke="#34d399" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowGreen)"/>
+  <text x="113" y="295" font-size="10" font-weight="700" fill="#e2e8f0" text-anchor="middle">Acetil-CoA</text>
+  <text x="183" y="295" font-size="10" font-weight="700" fill="#e2e8f0" text-anchor="middle">Propionil-CoA</text>
+  <text x="253" y="295" font-size="10" font-weight="700" fill="#e2e8f0" text-anchor="middle">Acil-CoA</text>
+  <rect x="350" y="160" width="90" height="50" rx="8" fill="#fb923c" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="395" y="178" font-size="12" font-weight="700" fill="#f8fafc" text-anchor="middle">Propionil-CoA</text>
+  <text x="395" y="198" font-size="10" font-weight="600" fill="#94a3b8" text-anchor="middle">→ Succinyl-CoA</text>
+  <rect x="360" y="225" width="70" height="26" rx="8" fill="#f87171" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="395" y="242" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">PROPCD</text>
+  <text x="395" y="260" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">Propionil-CoA carboxilasa</text>
+  <line x1="440" y1="185" x2="520" y2="240" stroke="#fb923c" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowOrange)"/>
+  <rect x="520" y="225" width="70" height="26" rx="8" fill="#f87171" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="555" y="242" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">MMUT</text>
+  <text x="555" y="260" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">Metilmalonil-CoA mutasa</text>
+  <line x1="520" y1="280" x2="620" y2="350" stroke="#fb923c" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowOrange)"/>
+  <text x="500" y="380" font-size="11" font-weight="700" fill="#e2e8f0" text-anchor="start">Succinyl-CoA → Ciclo TCA</text>
+  <rect x="550" y="360" width="110" height="50" rx="8" fill="#2d0000" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="605" y="378" font-size="12" font-weight="700" fill="#f87171" text-anchor="middle">PROPIONICACIDEMIA</text>
+  <text x="605" y="398" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">PROPCD↓ o MMUT↓</text>
+  <rect x="680" y="360" width="110" height="50" rx="8" fill="#2d0000" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="735" y="378" font-size="12" font-weight="700" fill="#f87171" text-anchor="middle">METILMALÓNICA</text>
+  <text x="735" y="398" font-size="10" font-weight="600" fill="#f87171" text-anchor="middle">MMUT↓ ± Cbl defecto</text>
+  <line x1="620" y1="360" x2="680" y2="380" stroke="#f87171" stroke-width="1.5" stroke-linecap="round" marker-end="url(#arrowRed)"/>
+  <text x="620" y="450" font-size="11" font-weight="700" fill="#e2e8f0" text-anchor="start">↑ Ácidos orgánicos urinarios · Cetosis · Hipoglucemia · Encefalopatía</text>
+  <text x="620" y="468" font-size="11" font-weight="700" fill="#e2e8f0" text-anchor="start">Tratamiento: Restricción BCAA, Suplementos, Dieta baja en proteína</text>
+</svg>

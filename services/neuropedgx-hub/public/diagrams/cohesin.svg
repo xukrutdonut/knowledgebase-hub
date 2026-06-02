@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" role="img" aria-label="mTORopatías — Alteraciones en la vía mTOR" preserveAspectRatio="xMidYMid meet" width="100%" height="auto">
+  <title>mTORopatías — Vía de Señalización mTOR</title>
+  <desc>Alteraciones en la vía PI3K/AKT/mTOR que causan mTORopatías y trastornos del neurodesarrollo</desc>
+  <defs>
+    <marker id="arrowBlue" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#6c8fff"/></marker>
+    <marker id="arrowGreen" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#34d399"/></marker>
+    <marker id="arrowRed" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#f87171"/></marker>
+    <marker id="arrowOrange" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L3,1.5 L0,3 z" fill="#fb923c"/></marker>
+    <linearGradient id="panelGlow" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1d2236"/><stop offset="100%" stop-color="#131724"/></linearGradient>
+    <style>
+      text { font-family: Inter, system-ui, sans-serif; }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="900" height="520" fill="#0f1117"/>
+  <text x="36" y="42" font-size="26" font-weight="800" fill="#f8fafc" text-anchor="start">mTORopatías — Vía de Señalización mTOR</text>
+  <text x="36" y="67" font-size="13" font-weight="500" fill="#94a3b8" text-anchor="start">Cascada PI3K → AKT → mTOR · TSC1/TSC2 · Regulación de traducción y crecimiento</text>
+  
+  <!-- Main pathway panel -->
+  <rect x="34" y="84" width="832" height="398" rx="12" fill="url(#panelGlow)" stroke="#2e3250" stroke-width="1"/>
+  
+  <!-- Membrane -->
+  <line x1="80" y1="130" x2="820" y2="130" stroke="#6c8fff" stroke-width="1.5" stroke-dasharray="5,5"/>
+  <text x="50" y="134" font-size="10" font-weight="700" fill="#94a3b8" text-anchor="end">Membrana</text>
+  
+  <!-- Growth factors: IGF1, mTORC1 activation -->
+  <circle cx="110" cy="110" r="16" fill="#6c8fff" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="110" y="116" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">IGF1</text>
+  <circle cx="190" cy="110" r="16" fill="#6c8fff" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="190" y="116" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">PI3K</text>
+  
+  <!-- PI3K → AKT -->
+  <line x1="130" y1="110" x2="160" y2="110" stroke="#6c8fff" stroke-width="1.2" marker-end="url(#arrowBlue)"/>
+  
+  <!-- AKT box -->
+  <rect x="172" y="100" width="50" height="28" rx="6" fill="#34d399" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="197" y="120" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">AKT</text>
+  
+  <!-- AKT → TSC complex -->
+  <line x1="197" y1="128" x2="197" y2="165" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrowGreen)"/>
+  
+  <!-- TSC1/TSC2 complex -->
+  <rect x="160" y="165" width="74" height="32" rx="6" fill="#a78bfa" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="197" y="180" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">TSC1/TSC2</text>
+  <text x="197" y="192" font-size="9" font-weight="500" fill="#c4b5fd" text-anchor="middle">GAP complex</text>
+  
+  <!-- TSC → RHEB (inactivation) -->
+  <line x1="234" y1="181" x2="280" y2="181" stroke="#a78bfa" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrowRed)"/>
+  <text x="257" y="173" font-size="9" font-weight="500" fill="#f87171">inactiva</text>
+  
+  <!-- RHEB-GTP circle -->
+  <circle cx="310" cy="181" r="18" fill="#f87171" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="310" y="185" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">RHEB</text>
+  
+  <!-- RHEB → mTORC1 -->
+  <line x1="328" y1="181" x2="380" y2="181" stroke="#f87171" stroke-width="1.2" marker-end="url(#arrowRed)"/>
+  
+  <!-- mTORC1 complex -->
+  <rect x="380" y="155" width="80" height="52" rx="8" fill="#fb923c" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="420" y="172" font-size="11" font-weight="700" fill="#f8fafc" text-anchor="middle">mTORC1</text>
+  <text x="420" y="185" font-size="9" font-weight="500" fill="#fed7aa" text-anchor="middle">mTOR/PRAS40</text>
+  <text x="420" y="196" font-size="9" font-weight="500" fill="#fed7aa" text-anchor="middle">/DMNT1</text>
+  
+  <!-- mTORC1 outputs -->
+  <line x1="460" y1="181" x2="520" y2="181" stroke="#fb923c" stroke-width="1.2" marker-end="url(#arrowOrange)"/>
+  
+  <!-- Protein synthesis outputs -->
+  <rect x="520" y="150" width="70" height="28" rx="6" fill="#34d399" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="555" y="161" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">4E-BP1</text>
+  <text x="555" y="171" font-size="9" font-weight="500" fill="#d1fae5" text-anchor="middle">Traducc.</text>
+  
+  <!-- Autophagy inhibition -->
+  <rect x="520" y="190" width="70" height="28" rx="6" fill="#6c8fff" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+  <text x="555" y="201" font-size="10" font-weight="700" fill="#f8fafc" text-anchor="middle">ULK1</text>
+  <text x="555" y="211" font-size="9" font-weight="500" fill="#bfdbfe" text-anchor="middle">-Autofagia</text>
+  
+  <!-- Clinical outcomes box -->
+  <rect x="640" y="140" width="150" height="90" rx="8" fill="#1f2937" stroke="#f87171" stroke-width="1"/>
+  <text x="715" y="160" font-size="11" font-weight="700" fill="#fca5a5" text-anchor="middle">Consecuencias</text>
+  <text x="650" y="181" font-size="9" font-weight="500" fill="#94a3b8">• Crecimiento exces.</text>
+  <text x="650" y="195" font-size="9" font-weight="500" fill="#94a3b8">• Malformaciones</text>
+  <text x="650" y="209" font-size="9" font-weight="500" fill="#94a3b8">• Discap. intelectual</text>
+  <text x="650" y="223" font-size="9" font-weight="500" fill="#94a3b8">• Epilepsia</text>
+  
+  <!-- Affected genes -->
+  <rect x="34" y="300" width="832" height="60" rx="8" fill="rgba(99,102,241,0.1)" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <text x="50" y="318" font-size="10" font-weight="700" fill="#818cf8">Genes asociados:</text>
+  <text x="50" y="335" font-size="9" font-weight="500" fill="#94a3b8">PIK3CA, PTEN (pérdida) • AKT1/2/3 • TSC1/TSC2 • RHEB • MTOR • DEPDC5 • PACS1/2</text>
+  <text x="50" y="350" font-size="9" font-weight="500" fill="#94a3b8">Resultado: Hemartomas tumorales, facomatosis, malformaciones corticales</text>
+  
+  <!-- Footer -->
+  <text x="450" y="475" font-size="11" font-weight="500" fill="#64748b" text-anchor="middle">Haz clic en genes subrayados para más información clínica</text>
+</svg>
