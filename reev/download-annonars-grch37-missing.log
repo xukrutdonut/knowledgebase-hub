@@ -1,0 +1,76 @@
+=== Start Sun May 17 08:26:35 CEST 2026 ===
+
+▶ Downloading gnomad-sv-exomes-grch37-0.3.1+0.39.0 → gnomad-sv-exomes
+  ↓ 000010.sst
+  ↓ 000012.sst
+  ↓ CURRENT
+  ↓ IDENTITY
+  ↓ LOCK
+  ↓ LOG
+  ↓ MANIFEST-000005
+  ↓ OPTIONS-000007
+  ↓ spec.yaml
+  ✅ gnomad-sv-exomes-grch37-0.3.1+0.39.0 downloaded
+  🔗 Symlink: grch37/gnomad-sv-exomes → gnomad-sv-exomes-grch37-0.3.1+0.39.0
+
+▶ Downloading functional-grch37-105.20201022+0.39.0 → functional
+  ↓ 000010.sst
+  ↓ 000012.sst
+  ↓ CURRENT
+  ↓ IDENTITY
+  ↓ LOCK
+  ↓ LOG
+  ↓ MANIFEST-000005
+  ↓ OPTIONS-000007
+  ↓ spec.yaml
+  ✅ functional-grch37-105.20201022+0.39.0 downloaded
+  🔗 Symlink: grch37/functional → functional-grch37-105.20201022+0.39.0
+
+▶ Downloading alphamissense-grch37-1+0.39.0 → alphamissense
+  ↓ 000010.sst
+  ↓ CURRENT
+  ↓ IDENTITY
+  ↓ LOCK
+  ↓ LOG
+  ↓ MANIFEST-000005
+  ↓ OPTIONS-000007
+  ↓ spec.yaml
+  ✅ alphamissense-grch37-1+0.39.0 downloaded
+  🔗 Symlink: grch37/alphamissense → alphamissense-grch37-1+0.39.0
+
+▶ Downloading regions-grch37-20240711+0.39.0 → regions
+  ↓ 000010.sst
+  ↓ 000012.sst
+  ↓ CURRENT
+  ↓ IDENTITY
+  ↓ LOCK
+  ↓ LOG
+  ↓ MANIFEST-000005
+  ↓ OPTIONS-000007
+  ↓ spec.yaml
+  ✅ regions-grch37-20240711+0.39.0 downloaded
+  🔗 Symlink: grch37/regions → regions-grch37-20240711+0.39.0
+
+▶ Downloading gnomad-sv-genomes-grch37-2.1.1+0.39.0 → gnomad-sv-genomes
+  ↓ 000010.sst
+  ↓ 000012.sst
+  ↓ CURRENT
+  ↓ IDENTITY
+  ↓ LOCK
+  ↓ LOG
+  ↓ MANIFEST-000005
+  ↓ OPTIONS-000007
+  ↓ spec.yaml
+  ✅ gnomad-sv-genomes-grch37-2.1.1+0.39.0 downloaded
+  🔗 Symlink: grch37/gnomad-sv-genomes → gnomad-sv-genomes-grch37-2.1.1+0.39.0
+
+=== All done Sun May 17 08:28:56 CEST 2026 ===
+=== Restarting reev-annonars ===
+time="2026-05-17T08:28:57+02:00" level=warning msg="/home/arkantu/workspace/reev/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container reev-annonars  Restarting
+ Container reev-annonars  Started
+=== annonars restarted ===
+l: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container reev-annonars  Restarting
+ Container reev-annonars  Started
+=== annonars restarted ===

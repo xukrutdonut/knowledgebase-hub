@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:12-alpine
+    environment:
+      - POSTGRES_DB=exomeslicer
+      - POSTGRES_USER=exomeslicer
+      - POSTGRES_PASSWORD=exomeslicer2026
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - exomeslicer-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U exomeslicer"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:6-alpine
+    networks:
+      - exomeslicer-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  exomeslicer:
+    build: .
+    environment:
+      # PostgreSQL
+      - DATABASE_URL=postgres://exomeslicer:exomeslicer2026@postgres:5432/exomeslicer
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=exomeslicer
+      - POSTGRES_USER=exomeslicer
+      - POSTGRES_PASSWORD=exomeslicer2026
+      
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+      
+      # Django
+      - DJANGO_SETTINGS_MODULE=config.settings.local
+      - DJANGO_SECRET_KEY=changeme-insecure-secret-key-for-dev
+      - DJANGO_DEBUG=True
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,exomeslicer.serviciosylaboratoriodomestico.site
+      - DJANGO_ADMIN_URL=admin/
+      - DJANGO_ADMIN_PASSWORD=akelarre
+      
+      # Security
+      - DJANGO_SECURE_SSL_REDIRECT=False
+      - DJANGO_ACCOUNT_ALLOW_REGISTRATION=True
+      
+      # AWS (optional - leave empty if not using)
+      - DJANGO_AWS_ACCESS_KEY_ID=
+      - DJANGO_AWS_SECRET_ACCESS_KEY=
+      - DJANGO_AWS_STORAGE_BUCKET_NAME=
+      
+      # Email (optional)
+      - DJANGO_MAILGUN_API_KEY=
+      - DJANGO_SERVER_EMAIL=
+      - MAILGUN_SENDER_DOMAIN=
+    ports:
+      - "8300:8000"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - exomeslicer-net
+    volumes:
+      - media-data:/app/media
+      - static-data:/app/staticfiles
+
+networks:
+  exomeslicer-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  media-data:
+  static-data:

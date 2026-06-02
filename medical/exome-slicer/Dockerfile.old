@@ -1,0 +1,74 @@
+FROM python:3.7-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies including Node.js
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    libpq-dev \
+    git \
+    netcat-openbsd \
+    curl \
+    ca-certificates \
+    gnupg \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y nodejs \
+    && npm install -g yarn \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Clone repository
+RUN git clone https://github.com/genomics-geek/exome_slicer.git /app
+
+# Install Python dependencies (both local and production for complete setup)
+RUN pip install --upgrade pip && \
+    pip install -r requirements/local.txt && \
+    pip install gunicorn==19.9.0
+
+# Build frontend
+WORKDIR /app/frontend
+RUN yarn install && yarn build
+
+# Move built files to Django static/templates
+WORKDIR /app
+RUN mkdir -p /app/exome_slicer/templates && \
+    cp -r /app/frontend/build/* /app/exome_slicer/templates/ || true && \
+    mkdir -p /app/staticfiles && \
+    cp -r /app/frontend/build/static/* /app/staticfiles/ || true
+
+# Collect static files
+RUN python manage.py collectstatic --noinput || true
+
+# Create entrypoint script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Wait for postgres\n\
+echo "Waiting for postgres..."\n\
+while ! nc -z $POSTGRES_HOST 5432; do\n\
+  sleep 0.1\n\
+done\n\
+echo "PostgreSQL started"\n\
+\n\
+# Run migrations\n\
+python manage.py migrate --noinput\n\
+\n\
+# Create superuser if it does not exist\n\
+python manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username=\"admin\").exists() or User.objects.create_superuser(\"admin\", \"admin@localhost\", \"${DJANGO_ADMIN_PASSWORD:-admin}\")" || true\n\
+\n\
+# Start server\n\
+exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3\n\
+' > /entrypoint.sh && chmod +x /entrypoint.sh
+
+EXPOSE 8000
+
+ENTRYPOINT ["/entrypoint.sh"]

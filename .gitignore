@@ -1,0 +1,48 @@
+# Secrets — NEVER commit
+reev/secrets/
+reev/.env
+
+# Docker volumes / persistent data
+reev/volumes/
+reev/data/
+
+# Python
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Node
+**/node_modules/
+npm-debug.log*
+
+# 3Dmol.js — downloaded at Docker build time
+services/protein-viewer/public/3Dmol-min.js
+
+# OpenCRAVAT data store (downloaded at runtime)
+services/opencravat/data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Embedded repos (manage separately)
+medical/exome-coverage-advisor/
+medical/varsome-api/
+
+# VarFish DB downloader — datos de referencia (grandes, se descargan en runtime)
+medical/varfish-db-downloader/bundled-data/
+medical/varfish-db-downloader/excerpt-data/
+medical/varfish-db-downloader/.snakemake/
+medical/varfish-db-downloader/data/
+medical/varfish-db-downloader/vardbs/

@@ -1,0 +1,49 @@
+dc.identifier: annonars/genes:{{ version }}
+dc.title: annonars genes database
+dc.creator: VarFish Development Team
+dc.format: application/x-rocksdb
+dc.date: {{ today }}
+x-version: {{ version }}
+dc.description: |
+  Gene information from the following databases, aggregated using annonars
+  v{{ v_annonars }} in varfish-downloader v{{ v_downloader }}:
+
+  - ACMG Supplementary Findings Gene List {{ v_acmg_sf }}
+  - gnomAD constraints v{{ v_gnomad_constraints }}
+  - dbNSFP v{{ v_dbnsfp }}
+  - NCBI gene database downloaded at {{ today }}
+  - HGNC database downloaded at {{ today }}
+  - ClinGen Gene Dosage pathogenicity {{ today }}
+  - DOMINO data v2019-02-19
+dc.source:
+  - PMID:35802134
+  - PMID:32461654
+  - PMID:33261662
+  - PMID:28985496
+  - https://www.ncbi.nlm.nih.gov/gene/
+  - https://www.genenames.org/
+x-created-from:
+  - name: ACMG SF Gene List
+    version: {{ v_acmg_sf }}
+  - name: ClinGen Gene Dosage pathog
+    version: {{ today }}
+  - name: gnomAD constraints
+    version: {{ v_gnomad_constraints }}
+  - name: dbNSFP
+    version: {{ v_dbnsfp }}
+  - name: NCBI gene
+    version: {{ today }}
+  - name: HGNC
+    version: {{ today }}
+  - name: OMIM
+    version: {{ today }}
+  - name: ORDO
+    version: {{ v_ordo }}
+  - name: rCNV pHaplo/pTriplo scores
+    version: 2022-Collins-et-al
+  - name: sHet scores
+    version: 2019-Weghorn-et-al
+  - name: GTex data
+    version: v8
+  - name: DOMINO data
+    version: "2019-02-19"

@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>REEV · Monitor de Bases de Datos</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'monospace'] },
+          colors: {
+            brand: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb' },
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
+    body { font-family: 'JetBrains Mono', monospace; }
+    .fade-in { animation: fadeIn .4s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .log-line-done { color: #4ade80; }
+    .log-line-skip { color: #94a3b8; }
+    .log-line-warn { color: #fb923c; }
+    .log-line-dl   { color: #60a5fa; }
+    .log-line-err  { color: #f87171; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<!-- TOOLTIP FLOTANTE DE GRUPO -->
+<div id="grp-tooltip"
+  class="fixed z-[9999] w-72 pointer-events-none opacity-0 transition-opacity duration-150"
+  style="top:0;left:0">
+  <div class="bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden">
+    <div id="grp-tt-header" class="px-4 py-3 bg-gray-750 border-b border-gray-700 flex items-center gap-3">
+      <span id="grp-tt-icon" class="text-2xl flex-shrink-0">🗄️</span>
+      <div>
+        <div id="grp-tt-label" class="font-bold text-white text-sm leading-tight"></div>
+        <div id="grp-tt-acronym" class="text-blue-400 text-[10px] italic mt-0.5 leading-snug"></div>
+        <div class="text-gray-500 text-[10px] uppercase tracking-widest mt-0.5">Grupo de bases de datos</div>
+      </div>
+    </div>
+    <div class="px-4 py-3 text-xs">
+      <p id="grp-tt-desc" class="text-gray-300 leading-relaxed"></p>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLTIP FLOTANTE -->
+<div id="db-tooltip"
+  class="fixed z-[9999] w-80 pointer-events-none opacity-0 transition-opacity duration-150"
+  style="top:0;left:0">
+  <div class="bg-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden">
+    <!-- Header -->
+    <div id="tt-header" class="px-4 py-3 bg-gray-750 border-b border-gray-700 flex items-start gap-3">
+      <span id="tt-icon" class="text-2xl flex-shrink-0 mt-0.5">🗄️</span>
+      <div class="min-w-0">
+        <div id="tt-name"     class="font-bold text-white text-sm leading-tight"></div>
+        <div id="tt-fullname" class="text-gray-400 text-xs mt-0.5 leading-snug"></div>
+      </div>
+    </div>
+    <!-- Body -->
+    <div class="px-4 py-3 space-y-2.5 text-xs">
+      <div id="tt-desc" class="text-gray-300 leading-relaxed"></div>
+      <div id="tt-use-row" class="hidden flex gap-2">
+        <span class="text-gray-500 flex-shrink-0 font-semibold uppercase tracking-wide text-[10px] pt-0.5">Uso</span>
+        <span id="tt-use" class="text-blue-300 leading-relaxed"></span>
+      </div>
+      <div class="flex flex-wrap gap-3 pt-1 border-t border-gray-700">
+        <div id="tt-ver-row" class="hidden flex-col gap-0.5">
+          <span class="text-gray-500 text-[10px] uppercase tracking-wide">Versión</span>
+          <span id="tt-ver" class="text-gray-200 font-mono"></span>
+        </div>
+        <div id="tt-size-row" class="hidden flex-col gap-0.5">
+          <span class="text-gray-500 text-[10px] uppercase tracking-wide">Tamaño</span>
+          <span id="tt-size" class="text-green-400 font-medium"></span>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-gray-500 text-[10px] uppercase tracking-wide">Estado</span>
+          <span id="tt-status"></span>
+        </div>
+      </div>
+      <!-- Download progress in tooltip -->
+      <div id="tt-dl-row" class="hidden pt-1 border-t border-gray-700 space-y-1">
+        <div class="flex items-center justify-between">
+          <span class="text-gray-400 font-semibold text-[10px] uppercase tracking-wide">⬇ Descarga en curso</span>
+          <span id="tt-dl-pct" class="text-blue-300 font-bold text-xs"></span>
+        </div>
+        <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+          <div id="tt-dl-bar" class="h-full bg-blue-500 rounded-full transition-all" style="width:0%"></div>
+        </div>
+        <div id="tt-dl-detail" class="text-gray-500 text-[10px]"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="sticky top-0 z-50 bg-gray-900/90 backdrop-blur border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <span class="text-2xl">🧬</span>
+    <div>
+      <h1 class="text-lg font-bold text-white tracking-tight">REEV · Monitor BD</h1>
+      <p class="text-xs text-gray-500">Vigilancia de bases de datos bioinformáticas</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <!-- Disco -->
+    <div id="disk-badge" class="hidden sm:flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-1.5 text-xs">
+      <span class="text-gray-400">💾 Disco:</span>
+      <span id="disk-used" class="text-yellow-400 font-medium">—</span>
+      <span class="text-gray-600">/</span>
+      <span id="disk-total" class="text-gray-300">—</span>
+      <span id="disk-pct" class="text-gray-500"></span>
+    </div>
+    <!-- Última actualización -->
+    <span id="last-refresh" class="text-xs text-gray-600"></span>
+    <!-- Botón refrescar -->
+    <button onclick="refresh()" id="btn-refresh"
+      class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs px-3 py-1.5 rounded-lg transition">
+      <span id="refresh-icon">↻</span> Actualizar
+    </button>
+    <!-- Botón lanzar actualización -->
+    <button onclick="triggerUpdate()" id="btn-update"
+      class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs px-3 py-2 rounded-lg font-semibold transition">
+      <span id="update-icon">▶</span>
+      <span id="update-label">Lanzar actualización</span>
+    </button>
+  </div>
+</header>
+
+<!-- ALERT STRIP -->
+<div id="alert" class="hidden mx-6 mt-4 p-3 rounded-lg text-sm font-medium"></div>
+
+<!-- UPDATE RUNNING BANNER -->
+<div id="update-bar" class="hidden mx-6 mt-3 rounded-xl bg-blue-950/60 border border-blue-700/50 px-4 py-3">
+  <div class="flex items-center gap-3 mb-2">
+    <span class="text-blue-400 text-lg animate-pulse">⬇</span>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-blue-300 text-sm font-semibold">Descargando bases de datos…</span>
+        <span id="update-pct-label" class="text-blue-300 text-xs font-mono font-bold shrink-0">—</span>
+      </div>
+      <div id="update-bar-current" class="text-xs text-blue-400/60 truncate mt-0.5">iniciando…</div>
+    </div>
+  </div>
+  <!-- Overall progress (done/total .done files) -->
+  <div class="space-y-1">
+    <div class="flex justify-between text-xs text-blue-400/50">
+      <span>Total bases de datos</span>
+      <span id="update-done-label">—</span>
+    </div>
+    <div class="h-2 bg-blue-900/60 rounded-full overflow-hidden">
+      <div id="update-bar-overall" class="h-full bg-blue-500 rounded-full transition-all duration-700" style="width:0%"></div>
+    </div>
+  </div>
+  <!-- Current file rsync progress -->
+  <div id="update-rsync-row" class="hidden mt-2 space-y-1">
+    <div class="flex justify-between text-xs text-blue-400/50">
+      <span>Archivo actual (rsync)</span>
+      <span id="update-rsync-eta"></span>
+    </div>
+    <div class="h-1.5 bg-blue-900/60 rounded-full overflow-hidden">
+      <div id="update-bar-rsync" class="h-full bg-cyan-400 rounded-full transition-all duration-500" style="width:0%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="px-6 py-6 space-y-6 max-w-screen-2xl mx-auto">
+
+  <!-- SUMMARY CARDS -->
+  <section id="summary" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+      <div class="text-3xl font-bold text-green-400" id="cnt-done">—</div>
+      <div class="text-xs text-gray-500 mt-1">Grupos completos</div>
+    </div>
+    <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+      <div class="text-3xl font-bold text-yellow-400" id="cnt-partial">—</div>
+      <div class="text-xs text-gray-500 mt-1">Parciales</div>
+    </div>
+    <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+      <div class="text-3xl font-bold text-red-400" id="cnt-incomplete">—</div>
+      <div class="text-xs text-gray-500 mt-1">Incompletos</div>
+    </div>
+    <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+      <div class="text-3xl font-bold text-blue-400" id="cnt-entries">—</div>
+      <div class="text-xs text-gray-500 mt-1">Total entradas</div>
+    </div>
+  </section>
+
+  <!-- DB GROUPS GRID -->
+  <section id="groups" class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+    <div class="col-span-full text-center text-gray-600 py-12">
+      <div class="spin inline-block text-2xl mb-2">⟳</div>
+      <p class="text-sm">Cargando estado de las bases de datos…</p>
+    </div>
+  </section>
+
+  <!-- LOG PANEL -->
+  <section class="bg-gray-900 rounded-xl border border-gray-800">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">📋</span>
+        <span class="font-semibold text-sm">Log de descarga</span>
+        <span id="log-live-dot" class="hidden w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer">
+          <input type="checkbox" id="log-live-chk" onchange="toggleLiveLog(this.checked)"
+            class="rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-0" />
+          Live
+        </label>
+        <button onclick="loadLog()" class="text-xs text-gray-400 hover:text-gray-200 transition px-2 py-1 rounded hover:bg-gray-800">
+          ↺ Recargar
+        </button>
+        <button onclick="clearLog()" class="text-xs text-gray-400 hover:text-gray-200 transition px-2 py-1 rounded hover:bg-gray-800">
+          ✕ Limpiar
+        </button>
+      </div>
+    </div>
+    <pre id="log-content"
+      class="overflow-auto text-xs leading-5 p-4 max-h-72 text-gray-400 bg-gray-950/50 rounded-b-xl whitespace-pre-wrap"
+    ><span class="text-gray-600">— sin entradas —</span></pre>
+  </section>
+</main>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let groups = []
+let sizeCache = {}
+let liveLogSource = null
+let updatePollTimer = null
+
+// ── Fetch helpers ──────────────────────────────────────────────────────────────
+// Base path adapts automatically whether served at / or under a sub-path like /db-monitor/
+const API_BASE = (() => {
+  const p = window.location.pathname.replace(/\/[^/]*$/, '')  // strip trailing segment if not dir
+  return p.endsWith('/') ? p.slice(0, -1) : p
+})()
+
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API_BASE + path, opts)
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
+  return r.json()
+}
+
+// ── Status badges ──────────────────────────────────────────────────────────────
+function statusBadge(status) {
+  const map = {
+    done:       ['bg-green-900/40 text-green-400 border-green-800', '✓ completo'],
+    partial:    ['bg-yellow-900/40 text-yellow-400 border-yellow-800', '◑ parcial'],
+    incomplete: ['bg-red-900/40 text-red-400 border-red-800', '✗ incompleto'],
+    missing:    ['bg-gray-800 text-gray-500 border-gray-700', '— falta'],
+    empty:      ['bg-gray-800 text-gray-500 border-gray-700', '○ vacío'],
+    exists:     ['bg-blue-900/40 text-blue-400 border-blue-800', '· existe'],
+  }
+  const [cls, label] = map[status] || ['bg-gray-800 text-gray-500 border-gray-700', status]
+  return `<span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium ${cls}">${label}</span>`
+}
+
+function entryStatusDot(status) {
+  const map = {
+    done:       'bg-green-400',
+    partial:    'bg-yellow-400',
+    incomplete: 'bg-red-400',
+    exists:     'bg-blue-400',
+    missing:    'bg-gray-600',
+  }
+  return `<span class="inline-block w-2 h-2 rounded-full ${map[status] || 'bg-gray-600'} flex-shrink-0"></span>`
+}
+
+// ── Database metadata for tooltips ────────────────────────────────────────────
+const DB_META = {
+  cadd: {
+    icon: '🎯', full: 'Combined Annotation Dependent Depletion',
+    desc: 'Puntúa la deletereidad de variantes integrando cientos de anotaciones. PHRED ≥ 20 = top 1% de variantes más deletéreas del genoma.',
+    use: 'Predicción de patogenicidad (ACMG PP3 / BP4)',
+  },
+  clinvar: {
+    icon: '🏥', full: 'Clinical Variant Archive (NCBI)',
+    desc: 'Archivo de variantes con significado clínico curado por laboratorios y expertos de todo el mundo. Incluye clasificaciones P/LP/VUS/LB/B.',
+    use: 'ACMG PP5 / BP6, diagnóstico clínico directo',
+  },
+  'clinvar-sv': {
+    icon: '🏥', full: 'ClinVar – Variantes Estructurales',
+    desc: 'Variantes estructurales (CNVs, inversiones, deleciones grandes) con interpretación clínica en ClinVar.',
+    use: 'Análisis de CNVs y variantes estructurales cromosómicas',
+  },
+  cons: {
+    icon: '🌿', full: 'UCSC Conservation Scores',
+    desc: 'Puntuaciones de conservación evolutiva (PhastCons, PhyloP) calculadas sobre alineamientos de hasta 100 vertebrados.',
+    use: 'Evidencia de conservación en clasificación ACMG',
+  },
+  dbsnp: {
+    icon: '🔖', full: 'Database of Single Nucleotide Polymorphisms (NCBI)',
+    desc: 'Base de datos de referencia de variantes de secuencia. Proporciona rsIDs, frecuencias poblacionales básicas y coordenadas canónicas.',
+    use: 'Identificación de variantes conocidas, obtención de rsIDs',
+  },
+  'gnomad-exomes': {
+    icon: '📊', full: 'Genome Aggregation Database – Exomas',
+    desc: 'Frecuencias alélicas de ~730.000 exomas de población general sin enfermedad severa. Base de referencia global para frecuencias en regiones codificantes.',
+    use: 'ACMG BA1 / BS1 / PM2, frecuencias poblacionales en exones',
+  },
+  'gnomad-genomes': {
+    icon: '📊', full: 'Genome Aggregation Database – Genomas',
+    desc: 'Frecuencias alélicas de ~76.000 genomas completos. Mayor cobertura en regiones intrónicas, UTRs y no codificantes que los exomas.',
+    use: 'ACMG BA1 / BS1 / PM2, variantes intrónicas y no codificantes',
+  },
+  'gnomad-mtdna': {
+    icon: '🔋', full: 'Genome Aggregation Database – ADN Mitocondrial',
+    desc: 'Frecuencias y niveles de heteroplasmia de variantes mitocondriales en ~56.000 individuos del proyecto gnomAD.',
+    use: 'Análisis de variantes mitocondriales, cuantificación de heteroplasmia',
+  },
+  helixmtdb: {
+    icon: '🔋', full: 'Helix Mitochondrial Database',
+    desc: 'Base de datos de variantes mitocondriales de >195.000 individuos secuenciados por Helix. Complementa gnomAD-mtDNA en cobertura.',
+    use: 'Frecuencias complementarias para clasificación de variantes mitocondriales',
+  },
+  dbnsfp: {
+    icon: '🧮', full: 'Database of Non-synonymous SNP Functional Predictions',
+    desc: 'Agrega >35 predictores funcionales para variantes de cambio de aminoácido: SIFT, PolyPhen-2, AlphaMissense, FATHMM, REVEL, MPC, BayesDel, PrimateAI, PhyloP-100, Gerp++ y más.',
+    use: 'Evidencia in silico múltiple para ACMG PP3 / BP4',
+  },
+  dbscsnv: {
+    icon: '✂️', full: 'Database of Splice-site Creating/Affecting SNVs',
+    desc: 'Predicciones del impacto de SNVs sobre sitios de splicing mediante RandomForest y AdaBoost entrenados sobre posiciones canónicas del spliceosoma. Valores > 0.6 se consideran deletéreos.',
+    use: 'Evaluación de variantes en sitios de splicing (ACMG PP3 / BP4)',
+  },
+  alphamissense: {
+    icon: '🤖', full: 'AlphaMissense (DeepMind / Google)',
+    desc: 'Predicciones de patogenicidad para todas las variantes missense posibles, basadas en la estructura proteica 3D de AlphaFold2. Cubre >99% del proteoma humano.',
+    use: 'Evidencia funcional de alta precisión para missense (ACMG PP3 / BP4)',
+  },
+  genes: {
+    icon: '🔗', full: 'Base de datos consolidada de genes (annonars)',
+    desc: 'Información integrada por gen: OMIM, HGNC, paneles de enfermedad, herencia, scores de haploinsuficiencia, constraint de gnomAD (pLI, LOEUF, Z-score missense).',
+    use: 'Evaluación de genes candidatos, ACMG PVS1 / PS1 / PM1',
+  },
+  'clinvar-genes': {
+    icon: '🏥', full: 'Resumen ClinVar agregado por gen',
+    desc: 'Resumen de todas las clasificaciones ClinVar disponibles agrupadas por gen. Permite ver si un gen tiene variantes P/LP previamente reportadas.',
+    use: 'Contexto clínico del gen, soporte para PP5 a nivel génico',
+  },
+}
+
+// ── Tooltip logic ──────────────────────────────────────────────────────────────
+let ttHideTimer = null
+const ttEl = document.getElementById('db-tooltip')
+
+// Map of rowId → entry data, populated during render
+const rowDataMap = {}
+
+function showTooltip(rowId, x, y) {
+  const entry = rowDataMap[rowId]
+  if (!entry) return
+
+  const meta = DB_META[entry.name] || {}
+
+  document.getElementById('tt-icon').textContent     = meta.icon || '🗄️'
+  document.getElementById('tt-name').textContent     = meta.full ? entry.name.toUpperCase() : entry.name
+  document.getElementById('tt-fullname').textContent = meta.full || entry.version || ''
+  document.getElementById('tt-desc').textContent     = meta.desc || 'Sin descripción disponible.'
+
+  const useRow = document.getElementById('tt-use-row')
+  if (meta.use) {
+    document.getElementById('tt-use').textContent = meta.use
+    useRow.classList.remove('hidden')
+  } else {
+    useRow.classList.add('hidden')
+  }
+
+  const verRow = document.getElementById('tt-ver-row')
+  if (entry.version) {
+    document.getElementById('tt-ver').textContent = entry.version
+    verRow.classList.remove('hidden')
+  } else {
+    verRow.classList.add('hidden')
+  }
+
+  // Size from cache (look up by group)
+  const sizeRow = document.getElementById('tt-size-row')
+  const entrySize = entry._cached_size
+  if (entrySize) {
+    document.getElementById('tt-size').textContent = entrySize
+    sizeRow.classList.remove('hidden')
+  } else {
+    sizeRow.classList.add('hidden')
+  }
+
+  document.getElementById('tt-status').innerHTML = statusBadge(entry.status)
+
+  // Download progress
+  const dlRow = document.getElementById('tt-dl-row')
+  if (entry.dl_progress && entry.dl_progress.sst_total > 0) {
+    const p = entry.dl_progress
+    const pct = p.pct ?? 0
+    document.getElementById('tt-dl-pct').textContent    = `${pct}%`
+    document.getElementById('tt-dl-bar').style.width    = `${pct}%`
+    document.getElementById('tt-dl-bar').className      = `h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`
+    document.getElementById('tt-dl-detail').textContent = `${p.sst_done} de ${p.sst_total} archivos completados · CURRENT: ${p.has_current ? '✓' : '…'}`
+    dlRow.classList.remove('hidden')
+  } else {
+    dlRow.classList.add('hidden')
+  }
+
+  positionTooltip(x, y)
+  clearTimeout(ttHideTimer)
+  ttEl.classList.remove('opacity-0')
+  ttEl.classList.add('opacity-100')
+}
+
+function positionTooltip(x, y) {
+  const W = window.innerWidth, H = window.innerHeight
+  const TW = 320, TH = ttEl.offsetHeight || 260
+  const margin = 14
+  let left = x + margin
+  let top  = y + margin
+  if (left + TW > W - 8)  left = x - TW - margin
+  if (top  + TH > H - 8)  top  = y - TH - margin
+  if (left < 8) left = 8
+  if (top  < 8) top  = 8
+  ttEl.style.left = left + 'px'
+  ttEl.style.top  = top  + 'px'
+}
+
+function hideTooltip() {
+  ttHideTimer = setTimeout(() => {
+    ttEl.classList.remove('opacity-100')
+    ttEl.classList.add('opacity-0')
+  }, 80)
+}
+
+// ── Group tooltip logic ──────────────────────────────────────────────────────
+let grpTtHideTimer = null
+const grpTtEl = document.getElementById('grp-tooltip')
+
+function showGroupTooltip(groupId, x, y) {
+  const g = groups.find(g => g.id === groupId)
+  if (!g || !g.description) return
+  document.getElementById('grp-tt-icon').textContent    = g.icon || '🗄️'
+  document.getElementById('grp-tt-label').textContent   = g.label
+  document.getElementById('grp-tt-acronym').textContent = g.acronym || ''
+  document.getElementById('grp-tt-desc').textContent    = g.description
+  positionGrpTooltip(x, y)
+  clearTimeout(grpTtHideTimer)
+  grpTtEl.classList.remove('opacity-0')
+  grpTtEl.classList.add('opacity-100')
+}
+
+function positionGrpTooltip(x, y) {
+  const W = window.innerWidth, H = window.innerHeight
+  const TW = 288, TH = grpTtEl.offsetHeight || 140
+  const margin = 12
+  let left = x + margin
+  let top  = y + margin
+  if (left + TW > W - 8) left = x - TW - margin
+  if (top  + TH > H - 8) top  = y - TH - margin
+  if (left < 8) left = 8
+  if (top  < 8) top  = 8
+  grpTtEl.style.left = left + 'px'
+  grpTtEl.style.top  = top  + 'px'
+}
+
+function hideGroupTooltip() {
+  grpTtHideTimer = setTimeout(() => {
+    grpTtEl.classList.remove('opacity-100')
+    grpTtEl.classList.add('opacity-0')
+  }, 80)
+}
+
+function attachTooltipListeners() {
+  document.querySelectorAll('tr[data-row-id]').forEach(tr => {
+    tr.addEventListener('mouseenter', e => showTooltip(tr.dataset.rowId, e.clientX, e.clientY))
+    tr.addEventListener('mousemove',  e => positionTooltip(e.clientX, e.clientY))
+    tr.addEventListener('mouseleave', () => hideTooltip())
+  })
+  document.querySelectorAll('.grp-info-btn').forEach(btn => {
+    btn.addEventListener('mouseenter', e => showGroupTooltip(btn.dataset.groupId, e.clientX, e.clientY))
+    btn.addEventListener('mousemove',  e => positionGrpTooltip(e.clientX, e.clientY))
+    btn.addEventListener('mouseleave', () => hideGroupTooltip())
+  })
+}
+
+// ── Render groups ──────────────────────────────────────────────────────────────
+function renderGroups() {
+  const el = document.getElementById('groups')
+  if (!groups.length) {
+    el.innerHTML = '<div class="col-span-full text-center text-gray-600 py-12 text-sm">Sin datos</div>'
+    return
+  }
+
+  el.innerHTML = groups.map(g => {
+    const size = sizeCache[g.id]
+    const totalSize = size ? `<span class="text-blue-400 font-medium">${size.total_human}</span>` : ''
+
+    const entries = g.entries.map(e => {
+      const sz = size?.sizes?.[e.name] ? `<span class="text-gray-500 text-xs ml-auto">${size.sizes[e.name]}</span>` : ''
+      const ver = e.version
+        ? `<span class="text-gray-600 text-xs truncate max-w-[220px]" title="${e.version}">${e.version}</span>`
+        : ''
+
+      // Store entry in rowDataMap for tooltip, enriching with cached size
+      const rowId = `${g.id}__${e.name}`
+      rowDataMap[rowId] = { ...e, _cached_size: size?.sizes?.[e.name] || null }
+
+      // Download progress bar
+      let dlProgress = ''
+      if (e.dl_progress && e.dl_progress.sst_total > 0) {
+        const p = e.dl_progress
+        const pct = p.pct ?? 0
+        const barColor = pct === 100 ? 'bg-green-500' : 'bg-blue-500'
+        dlProgress = `
+          <div class="mt-1 flex items-center gap-2">
+            <div class="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <div class="${barColor} h-full rounded-full transition-all" style="width:${pct}%"></div>
+            </div>
+            <span class="text-gray-500 text-xs whitespace-nowrap">${p.sst_done}/${p.sst_total} · ${pct}%</span>
+          </div>`
+      }
+
+      return `
+        <tr data-row-id="${rowId}" class="hover:bg-gray-800/40 transition cursor-default">
+          <td class="py-1.5 pr-2 align-top">${entryStatusDot(e.status)}</td>
+          <td class="py-1.5 pr-3 text-gray-300 font-medium text-xs whitespace-nowrap align-top">
+            ${e.name}${dlProgress}
+          </td>
+          <td class="py-1.5 pr-3 hidden sm:table-cell align-top">${ver}</td>
+          <td class="py-1.5 pr-3 text-gray-500 text-xs whitespace-nowrap align-top">${e.mtime_iso ?? '—'}</td>
+          <td class="py-1.5 text-right align-top">${sz}</td>
+        </tr>`
+    }).join('')
+
+    const loadSizeBtn = size
+      ? ''
+      : `<button onclick="loadSize('${g.id}')" class="text-xs text-blue-400 hover:text-blue-300 transition px-2 py-0.5 rounded hover:bg-gray-800">⇥ tamaño</button>`
+
+    const infoBtn = ''
+
+    // Downloading entries (status = partial or incomplete with dl_progress)
+    const downloadingEntries = g.entries.filter(e => e.dl_progress && e.status !== 'done')
+    const dlBanner = downloadingEntries.length ? `
+      <div class="px-4 py-2.5 bg-blue-950/40 border-b border-blue-900/40">
+        <div class="text-[10px] text-blue-400 font-semibold uppercase tracking-widest mb-1.5">⬇ Descargando</div>
+        <div class="space-y-1.5">
+          ${downloadingEntries.map(e => {
+            const p = e.dl_progress
+            const pct = p.pct ?? 0
+            const barColor = p.has_current ? 'bg-green-500' : 'bg-blue-500'
+            const label = p.sst_total > 0
+              ? `${p.sst_done}/${p.sst_total} archivos · ${pct}%`
+              : (p.has_current ? '100% · completo' : 'iniciando…')
+            return `<div>
+              <div class="flex items-center justify-between mb-0.5">
+                <span class="text-gray-300 text-xs font-medium">${e.name}</span>
+                <span class="text-gray-500 text-[10px] font-mono">${label}</span>
+              </div>
+              <div class="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <div class="${barColor} h-full rounded-full transition-all duration-500" style="width:${pct || (p.has_current ? 100 : 2)}%"></div>
+              </div>
+            </div>`
+          }).join('')}
+        </div>
+      </div>` : ''
+
+    // Description banner (dead code – now shown via hover tooltip; kept for reference)
+    // const descBanner = ''
+
+    return `
+      <div class="bg-gray-900 rounded-xl border border-gray-800 fade-in flex flex-col">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-800 grp-info-btn cursor-default" data-group-id="${g.id}">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-xl flex-shrink-0">${g.icon}</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <h3 class="font-semibold text-sm text-white truncate">${g.label}</h3>
+              </div>
+              <div class="flex items-center gap-2 mt-0.5">
+                ${statusBadge(g.status)}
+                ${totalSize}
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+            ${loadSizeBtn}
+            <span class="text-xs text-gray-600">${g.last_update_iso ? `↻ ${g.last_update_iso}` : '—'}</span>
+          </div>
+        </div>
+        ${dlBanner}
+        <div class="px-4 py-2 flex-1 overflow-x-auto">
+          ${g.entries.filter(e => !e.dl_progress || e.status === 'done').length ? `
+          <table class="w-full text-xs">
+            <tbody>${entries}</tbody>
+          </table>` : `<p class="text-gray-600 text-xs py-2">Sin entradas instaladas</p>`}
+        </div>
+        ${g.error ? `<div class="px-4 pb-2 text-xs text-red-400">⚠ ${g.error}</div>` : ''}
+      </div>`
+  }).join('')
+
+  // Wire up tooltip listeners after DOM is updated
+  attachTooltipListeners()
+}
+
+// ── Summary counts ─────────────────────────────────────────────────────────────
+function updateSummary() {
+  document.getElementById('cnt-done').textContent       = groups.filter(g => g.status === 'done').length
+  document.getElementById('cnt-partial').textContent    = groups.filter(g => g.status === 'partial').length
+  document.getElementById('cnt-incomplete').textContent = groups.filter(g => ['incomplete','missing','empty'].includes(g.status)).length
+  document.getElementById('cnt-entries').textContent    = groups.reduce((a,g) => a + g.entries.length, 0)
+}
+
+// ── Load status ────────────────────────────────────────────────────────────────
+async function refresh() {
+  const icon = document.getElementById('refresh-icon')
+  icon.classList.add('spin')
+  try {
+    groups = await apiFetch('/api/status')
+    renderGroups()
+    updateSummary()
+    document.getElementById('last-refresh').textContent = `↻ ${new Date().toLocaleTimeString()}`
+  } catch(e) {
+    showAlert('error', `Error al cargar estado: ${e.message}`)
+  } finally {
+    icon.classList.remove('spin')
+  }
+}
+
+async function loadDisk() {
+  try {
+    const d = await apiFetch('/api/disk')
+    if (d.used || d.size) {
+      document.getElementById('disk-used').textContent  = d.used  || '—'
+      document.getElementById('disk-total').textContent = d.size  || '—'
+      document.getElementById('disk-pct').textContent   = d.use_pct ? `(${d.use_pct})` : ''
+      document.getElementById('disk-badge').classList.remove('hidden')
+    }
+  } catch(e) { /* silently ignore */ }
+}
+
+// ── Load size for a group ──────────────────────────────────────────────────────
+async function loadSize(groupId) {
+  try {
+    const sz = await apiFetch(`/api/size/${groupId}`)
+    sizeCache[groupId] = sz
+    renderGroups()
+  } catch(e) {
+    showAlert('warn', `No se pudo calcular el tamaño de ${groupId}: ${e.message}`)
+  }
+}
+
+// ── Trigger update ─────────────────────────────────────────────────────────────
+async function triggerUpdate() {
+  const running = (await apiFetch('/api/update/running')).running
+  if (running) {
+    showAlert('info', 'La actualización ya está en curso.')
+    return
+  }
+  if (!confirm('¿Lanzar download-smart.sh en el NAS? El proceso tardará varias horas.')) return
+  try {
+    const r = await apiFetch('/api/update/start', { method: 'POST' })
+    showAlert('success', `▶ Actualización iniciada (PID: ${r.pid})`)
+    setUpdateRunning(true)
+    startUpdatePoll()
+    // Enable live log automatically
+    document.getElementById('log-live-chk').checked = true
+    toggleLiveLog(true)
+    loadLog()
+  } catch(e) {
+    showAlert('error', `No se pudo lanzar: ${e.message}`)
+  }
+}
+
+function setUpdateRunning(running) {
+  const btn    = document.getElementById('btn-update')
+  const icon   = document.getElementById('update-icon')
+  const label  = document.getElementById('update-label')
+  const bar    = document.getElementById('update-bar')
+  if (running) {
+    btn.disabled = true
+    icon.textContent = '⏳'
+    label.textContent = 'Actualizando…'
+    bar.classList.remove('hidden')
+  } else {
+    btn.disabled = false
+    icon.textContent = '▶'
+    label.textContent = 'Lanzar actualización'
+    bar.classList.add('hidden')
+  }
+}
+
+function startUpdatePoll() {
+  clearInterval(updatePollTimer)
+  // Fetch progress immediately, then every 8s
+  fetchUpdateProgress()
+  updatePollTimer = setInterval(async () => {
+    try {
+      const r = await apiFetch('/api/update/running')
+      if (!r.running) {
+        setUpdateRunning(false)
+        clearInterval(updatePollTimer)
+        showAlert('success', '✓ Actualización finalizada. Recargando estado…')
+        await refresh()
+        return
+      }
+    } catch(e) { /* ignore */ }
+    fetchUpdateProgress()
+  }, 8000)
+}
+
+async function fetchUpdateProgress() {
+  try {
+    const p = await apiFetch('/api/update/progress')
+    // Overall bar
+    const overallBar = document.getElementById('update-bar-overall')
+    const pctLabel   = document.getElementById('update-pct-label')
+    const doneLabel  = document.getElementById('update-done-label')
+    const currentEl  = document.getElementById('update-bar-current')
+    if (overallBar) overallBar.style.width = `${p.pct}%`
+    if (pctLabel)   pctLabel.textContent   = p.total > 0 ? `${p.pct}%` : '…'
+    if (doneLabel)  doneLabel.textContent  = p.total > 0 ? `${p.done} / ${p.total} completas` : '—'
+    if (currentEl && p.current_file) currentEl.textContent = p.current_file
+    // Rsync bar (current file)
+    const rsyncRow = document.getElementById('update-rsync-row')
+    const rsyncBar = document.getElementById('update-bar-rsync')
+    const rsyncEta = document.getElementById('update-rsync-eta')
+    if (p.rsync_pct !== null && p.rsync_pct !== undefined) {
+      if (rsyncRow) rsyncRow.classList.remove('hidden')
+      if (rsyncBar) rsyncBar.style.width = `${p.rsync_pct}%`
+      if (rsyncEta) rsyncEta.textContent = p.rsync_eta ? `ETA ${p.rsync_eta}` : ''
+    } else {
+      if (rsyncRow) rsyncRow.classList.add('hidden')
+    }
+  } catch(e) { /* ignore */ }
+}
+
+// ── Log ────────────────────────────────────────────────────────────────────────
+function colorizeLine(line) {
+  if (/✓|SKIP|completo/i.test(line))    return `<span class="log-line-skip">${escHtml(line)}</span>`
+  if (/⬇|DESCARGANDO|download/i.test(line)) return `<span class="log-line-dl">${escHtml(line)}</span>`
+  if (/✓.*DONE|done/i.test(line))        return `<span class="log-line-done">${escHtml(line)}</span>`
+  if (/⚠|WARN/i.test(line))             return `<span class="log-line-warn">${escHtml(line)}</span>`
+  if (/error|fail/i.test(line))          return `<span class="log-line-err">${escHtml(line)}</span>`
+  return escHtml(line)
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+}
+
+async function loadLog() {
+  try {
+    const r = await apiFetch('/api/log?lines=150')
+    const pre = document.getElementById('log-content')
+    pre.innerHTML = r.content.split('\n').map(colorizeLine).join('\n')
+    pre.scrollTop = pre.scrollHeight
+  } catch(e) {
+    document.getElementById('log-content').textContent = `Error: ${e.message}`
+  }
+}
+
+function clearLog() {
+  document.getElementById('log-content').innerHTML = '<span class="text-gray-600">— limpiado —</span>'
+}
+
+function toggleLiveLog(enabled) {
+  const dot = document.getElementById('log-live-dot')
+  if (enabled) {
+    if (liveLogSource) return
+    const pre = document.getElementById('log-content')
+    pre.innerHTML = ''
+    liveLogSource = new EventSource(API_BASE + '/api/log/stream')
+    dot.classList.remove('hidden')
+    liveLogSource.onmessage = (ev) => {
+      const line = JSON.parse(ev.data)
+      const span = document.createElement('span')
+      span.innerHTML = colorizeLine(line) + '\n'
+      pre.appendChild(span)
+      pre.scrollTop = pre.scrollHeight
+    }
+    liveLogSource.onerror = () => {
+      liveLogSource.close()
+      liveLogSource = null
+      dot.classList.add('hidden')
+      document.getElementById('log-live-chk').checked = false
+    }
+  } else {
+    if (liveLogSource) { liveLogSource.close(); liveLogSource = null }
+    dot.classList.add('hidden')
+    loadLog()
+  }
+}
+
+// ── Alerts ─────────────────────────────────────────────────────────────────────
+let alertTimer = null
+function showAlert(type, msg) {
+  const el = document.getElementById('alert')
+  const map = {
+    success: 'bg-green-900/60 border border-green-700 text-green-300',
+    error:   'bg-red-900/60 border border-red-700 text-red-300',
+    warn:    'bg-yellow-900/60 border border-yellow-700 text-yellow-300',
+    info:    'bg-blue-900/60 border border-blue-700 text-blue-300',
+  }
+  el.className = `mx-6 mt-4 p-3 rounded-lg text-sm font-medium fade-in ${map[type] || map.info}`
+  el.textContent = msg
+  el.classList.remove('hidden')
+  clearTimeout(alertTimer)
+  alertTimer = setTimeout(() => el.classList.add('hidden'), 6000)
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  // Check running state immediately — in parallel with data loading
+  const runningCheck = apiFetch('/api/update/running').then(r => {
+    if (r.running) { setUpdateRunning(true); startUpdatePoll() }
+  }).catch(() => {})
+
+  await Promise.all([refresh(), loadDisk(), loadLog(), runningCheck])
+
+  // Auto-refresh: every 15s when downloads are active, every 5min otherwise
+  function scheduleRefresh() {
+    const hasActive = groups.some(g =>
+      g.entries.some(e => e.dl_progress && e.status !== 'done')
+    )
+    setTimeout(async () => {
+      await refresh()
+      scheduleRefresh()
+    }, hasActive ? 15_000 : 300_000)
+  }
+  scheduleRefresh()
+}
+
+init()
+</script>
+</body>
+</html>

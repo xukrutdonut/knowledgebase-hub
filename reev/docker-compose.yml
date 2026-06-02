@@ -1,0 +1,498 @@
+---
+# REEV v0.6.0 — Khazad-dum deployment (no traefik, NPM handles SSL)
+# Data on NAS via sshfs: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/
+
+version: "3.9"
+
+# == Reusable Definitions ====================================================
+
+x-service-default: &service_default
+  env_file:
+    - .env
+  networks:
+    - reev
+  restart: unless-stopped
+
+# All bioinformatics services get /data → reev-static/data (read-only)
+x-service-internal: &service_internal
+  <<: *service_default
+  volumes:
+    - type: bind
+      source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+      target: /data
+      read_only: true
+
+x-service-reev-default: &service_reev_default
+  <<: *service_default
+  image: "ghcr.io/bihealth/reev:main"
+  environment:
+    POSTGRES_PASSWORD: "reev-db-jPc1Fk3XoUXurUmz4R8arA"
+  secrets:
+    - db-password
+  depends_on:
+    - annonars
+    - cada-prio
+    - dotty
+    - mehari
+    - nginx
+    - postgres
+    - rabbitmq
+    - redis
+    - viguno
+
+# == Services ================================================================
+
+services:
+  # -- nginx (static files) --------------------------------------------------
+  nginx:
+    <<: *service_default
+    container_name: reev-nginx
+    hostname: nginx
+    image: nginx:1
+    volumes:
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+        target: /data
+        read_only: true
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/config/nginx/nginx.conf
+        target: /etc/nginx/nginx.conf
+
+  # -- REEV backend ----------------------------------------------------------
+  reev-backend:
+    <<: *service_reev_default
+    container_name: reev-backend
+    hostname: reev-backend
+    image: "ghcr.io/bihealth/reev:0.6.0"
+    ports:
+      - "8200:8080"
+    environment:
+      FORWARDED_ALLOW_IPS: "*"
+      POSTGRES_PASSWORD: "reev-db-jPc1Fk3XoUXurUmz4R8arA"
+      POSTGRES_HOST: postgres
+      SERVE_FRONTEND: /home/reev/ui
+    volumes:
+      # Patches: (1) null-check for ucsc_conservation GRCh37, (2) clinvar records wrapper,
+      #          (3) dotty SPDI response format, (4) pubtator3 abstract null-check
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/reev-ui-patches/index-jMqp1mrs.js
+        target: /home/reev/ui/assets/index-jMqp1mrs.js
+        read_only: true
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/reev-ui-patches/index.html
+        target: /home/reev/ui/index.html
+        read_only: true
+      # Backend patch: raise httpx proxy timeout (120s) for NAS-backed services
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/reev-backend-patches/proxy.py
+        target: /home/reev/app/api/internal/endpoints/proxy.py
+        read_only: true
+      # Backend patch: WinterVar non-JSON response → default ACMG rating instead of 500
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/reev-backend-patches/remote.py
+        target: /home/reev/app/api/internal/endpoints/remote.py
+        read_only: true
+      # UI patch: GeneLiteratureCard optional-chain on abstract.pmid/journal/date/passages
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/reev-ui-patches/GeneLiteratureCard-Av9mbsqx.js
+        target: /home/reev/ui/assets/GeneLiteratureCard-Av9mbsqx.js
+        read_only: true
+      # UI patch: SeqvarScoresCard CADD fallback for SIFT, PolyPhen2 HVAR, Gerp++ when dbNSFP missing (GRCh37)
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/reev-ui-patches/SeqvarScoresCard-QuWJsaiW.js
+        target: /home/reev/ui/assets/SeqvarScoresCard-QuWJsaiW.js
+        read_only: true
+      # UI patch: StrucvarClinsigCard - add auto-acmg strucvar ACMG criteria display (auto-acmg SV endpoint)
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/reev-ui-patches/StrucvarClinsigCard-dT0IsBqR.js
+        target: /home/reev/ui/assets/StrucvarClinsigCard-dT0IsBqR.js
+        read_only: true
+
+  # -- REEV celery worker ----------------------------------------------------
+  reev-celery-worker:
+    <<: *service_reev_default
+    container_name: reev-celery-worker
+    hostname: reev-celery-worker
+    image: "ghcr.io/bihealth/reev:0.6.0"
+    environment:
+      POSTGRES_PASSWORD: "reev-db-jPc1Fk3XoUXurUmz4R8arA"
+      POSTGRES_HOST: postgres
+    entrypoint:
+      - /entrypoint-celery-worker.sh
+
+  # -- REEV celery beat ------------------------------------------------------
+  reev-celery-beat:
+    <<: *service_reev_default
+    container_name: reev-celery-beat
+    hostname: reev-celery-beat
+    image: "ghcr.io/bihealth/reev:0.6.0"
+    environment:
+      POSTGRES_PASSWORD: "reev-db-jPc1Fk3XoUXurUmz4R8arA"
+      POSTGRES_HOST: postgres
+    entrypoint:
+      - /entrypoint-celery-beat.sh
+
+  # -- Dotty -----------------------------------------------------------------
+  dotty:
+    <<: *service_internal
+    container_name: reev-dotty
+    hostname: dotty
+    image: "ghcr.io/bihealth/dotty:0.2.1"
+    environment:
+      # Los archivos cdot y seqrepo están en /data/download/dotty/
+      DATA_DIR: /data/download/dotty
+      # HAVE_SEQREPO=false: deshabilita validación SeqRepo en Dotty.
+      # El SeqRepo bihealth (v0.1.0) no contiene transcriptos NM_ → error al buscar p.ej. NM_006514.4:c.3361C>T
+      # Cuando el rsync de biocommons (~75 GB) termine, cambiar a "true" para validación completa.
+      HAVE_SEQREPO: "false"
+
+  # -- Mehari ----------------------------------------------------------------
+  mehari:
+    <<: *service_internal
+    container_name: reev-mehari
+    hostname: mehari
+    image: "ghcr.io/varfish-org/mehari:0.25.3"
+    environment:
+      PATH_DB: /data/mehari
+
+  # -- Viguno ----------------------------------------------------------------
+  viguno:
+    <<: *service_internal
+    container_name: reev-viguno
+    hostname: viguno
+    image: "ghcr.io/varfish-org/viguno:0.3.1"
+
+  # -- Annonars --------------------------------------------------------------
+  annonars:
+    <<: *service_internal
+    container_name: reev-annonars
+    hostname: annonars
+    image: "ghcr.io/varfish-org/annonars:0.39.0"
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+
+  # -- Auto-ACMG ------------------------------------------------------------
+  auto-acmg:
+    <<: *service_default
+    container_name: reev-auto-acmg
+    hostname: auto-acmg
+    image: "ghcr.io/bihealth/auto-acmg:main"
+    environment:
+      AUTO_ACMG_API_ANNONARS_URL: "http://annonars:8080"
+      AUTO_ACMG_API_MEHARI_URL: "http://mehari:8080"
+      AUTO_ACMG_API_DOTTY_URL: "http://dotty:8080"
+      AUTO_ACMG_SEQREPO_DATA_DIR: "/home/auto-acmg/seqrepo/master"
+    volumes:
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data/download/dotty/2024-12-20
+        target: /home/auto-acmg/seqrepo/master
+        read_only: true
+    depends_on:
+      - annonars
+      - dotty
+      - mehari
+
+  # -- cada-prio -------------------------------------------------------------
+  cada-prio:
+    <<: *service_internal
+    container_name: reev-cada-prio
+    hostname: cada-prio
+    image: "ghcr.io/bihealth/cada-prio:main"
+    environment:
+      CADA_PATH_DATA: /data/cada-prio/model/model
+
+  # -- PostgreSQL ------------------------------------------------------------
+  postgres:
+    <<: *service_default
+    container_name: reev-postgres
+    hostname: postgres
+    image: postgres:12
+    secrets:
+      - db-password
+    environment:
+      POSTGRES_USER: reev
+      POSTGRES_DB: reev
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+    volumes:
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/postgres/data
+        target: /var/lib/postgresql/data
+
+  # -- Redis -----------------------------------------------------------------
+  redis:
+    <<: *service_default
+    container_name: reev-redis
+    hostname: redis
+    image: redis:7
+    volumes:
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/redis/data
+        target: /data
+
+  # -- RabbitMQ --------------------------------------------------------------
+  rabbitmq:
+    <<: *service_default
+    container_name: reev-rabbitmq
+    hostname: rabbitmq
+    image: rabbitmq:3
+    volumes:
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/rabbitmq/data
+        target: /var/lib/rabbitmq
+
+  # -- REEV DB Monitor -------------------------------------------------------
+  reev-monitor:
+    <<: *service_default
+    container_name: reev-monitor
+    hostname: reev-monitor
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/reev/monitor
+      dockerfile: Dockerfile
+    image: reev-monitor:latest
+    ports:
+      - "8300:8300"
+    environment:
+      DATA_DIR: /nas/data
+      LOG_FILE: /nas/download-smart.log
+      NAS_USER: "arkantu"
+      NAS_HOST: "192.168.0.193"
+      NAS_SCRIPT: /mnt/swarm-storage/reev-data/download-smart.sh
+      NAS_LOG: /mnt/swarm-storage/reev-data/download-smart.log
+      SSH_KEY: /root/.ssh/id_ed25519
+    volumes:
+      # NAS data — read-only (sshfs mount propagated from host)
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+        target: /nas/data
+        read_only: true
+      # Download log — rw para que el monitor pueda escribir entradas propias
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/download-smart.log
+        target: /nas/download-smart.log
+      # SSH key to trigger NAS update script
+      - type: bind
+        source: /home/arkantu/.ssh/id_ed25519
+        target: /root/.ssh/id_ed25519
+        read_only: true
+
+  # -- pgAdmin ---------------------------------------------------------------
+  pgadmin:
+    <<: *service_default
+    container_name: reev-pgadmin
+    hostname: pgadmin
+    image: dpage/pgadmin4:latest
+    secrets:
+      - db-password
+      - pgadmin-password
+    depends_on:
+      - postgres
+    volumes:
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/volumes/pgadmin/data
+        target: /var/lib/pgadmin
+      - type: bind
+        source: /home/arkantu/workspace/docker/genomic-stack/reev/config/pgadmin/servers.json
+        target: /pgadmin4/servers.json
+
+  # -- JBrowse 2 genome browser -----------------------------------------------
+  jbrowse2:
+    <<: *service_default
+    container_name: reev-jbrowse2
+    hostname: jbrowse2
+    image: "192.168.0.193:5555/jbrowse2-web:latest"
+    ports:
+      - "3006:80"
+
+  # -- OpenCRAVAT — anotación y predicción de patogenicidad modular ----------
+  # GUI web en :8080, 100+ anotadores (AlphaMissense, SpliceAI, CADD, REVEL…)
+  opencravat:
+    <<: *service_default
+    container_name: genomic-opencravat
+    hostname: opencravat
+    image: karchinlab/opencravat:latest
+    command: ["oc", "gui", "--headless", "--port", "8080", "--multiuser"]
+    ports:
+      - "8402:8080"
+    volumes:
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/opencravat/data
+        target: /mnt/cravat
+    environment:
+      OC_MULTIUSER: "true"
+    restart: unless-stopped
+
+  # -- Variant Tracker — almacenamiento + alertas de reclasificación ---------
+  # API REST para gestionar variantes de pacientes y detectar cambios en
+  # ClinVar mensualmente usando variant-alert (SeqOne/variant_alert).
+  variant-tracker:
+    <<: *service_default
+    container_name: genomic-variant-tracker
+    hostname: variant-tracker
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/services/variant-tracker
+      dockerfile: Dockerfile
+    image: genomic-variant-tracker:latest
+    ports:
+      - "8403:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://reev:${VARTRACKER_DB_PASSWORD}@postgres:5432/vartracker
+      DATABASE_URL_SYNC: postgresql://reev:${VARTRACKER_DB_PASSWORD}@postgres:5432/vartracker
+      REDIS_URL: redis://redis:6379/1
+      RABBITMQ_URL: amqp://guest@rabbitmq:5672//
+      REEV_API_URL: http://reev-backend:8080
+      CLINVAR_DATA_DIR: /data/clinvar
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@neuropedialab.org}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      LAB_NAME: ${LAB_NAME:-Laboratorio de Neuropediatría}
+      WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    volumes:
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/variant-tracker/clinvar
+        target: /data/clinvar
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    restart: unless-stopped
+
+  variant-tracker-worker:
+    <<: *service_default
+    container_name: genomic-variant-tracker-worker
+    hostname: variant-tracker-worker
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/services/variant-tracker
+      dockerfile: Dockerfile
+    image: genomic-variant-tracker:latest
+    command: ["celery", "-A", "tracker.tasks", "worker",
+              "--loglevel=info", "-Q", "clinvar,alerts,default", "-c", "2"]
+    environment:
+      DATABASE_URL_SYNC: postgresql://reev:${VARTRACKER_DB_PASSWORD}@postgres:5432/vartracker
+      REDIS_URL: redis://redis:6379/1
+      RABBITMQ_URL: amqp://guest@rabbitmq:5672//
+      CLINVAR_DATA_DIR: /data/clinvar
+      REEV_API_URL: http://reev-backend:8080
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@neuropedialab.org}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      LAB_NAME: ${LAB_NAME:-Laboratorio de Neuropediatría}
+    volumes:
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/variant-tracker/clinvar
+        target: /data/clinvar
+    depends_on:
+      - variant-tracker
+    restart: unless-stopped
+
+  variant-tracker-beat:
+    <<: *service_default
+    container_name: genomic-variant-tracker-beat
+    hostname: variant-tracker-beat
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/services/variant-tracker
+      dockerfile: Dockerfile
+    image: genomic-variant-tracker:latest
+    command: ["celery", "-A", "tracker.tasks", "beat",
+              "--loglevel=info", "-s", "/tmp/celerybeat-schedule"]
+    environment:
+      DATABASE_URL_SYNC: postgresql://reev:${VARTRACKER_DB_PASSWORD}@postgres:5432/vartracker
+      REDIS_URL: redis://redis:6379/1
+      RABBITMQ_URL: amqp://guest@rabbitmq:5672//
+      CLINVAR_DATA_DIR: /data/clinvar
+    volumes:
+      - type: bind
+        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/variant-tracker/clinvar
+        target: /data/clinvar
+    depends_on:
+      - variant-tracker
+    restart: unless-stopped
+
+  # -- Protein Viewer — Mol* 3D + AlphaFold + mapeo de variantes ------------
+  protein-viewer:
+    <<: *service_default
+    container_name: genomic-protein-viewer
+    hostname: protein-viewer
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/services/protein-viewer
+      dockerfile: Dockerfile
+    image: genomic-protein-viewer:latest
+    ports:
+      - "8404:3000"
+    environment:
+      REEV_API_URL: http://reev-backend:8080
+      ALPHAFOLD_API: https://alphafold.ebi.ac.uk/api
+      PDB_API: https://data.rcsb.org/rest/v1
+      UNIPROT_API: https://rest.uniprot.org
+      PORT: "3000"
+    restart: unless-stopped
+
+  # -- Exome Coverage Advisor API -------------------------------------------
+  exome-advisor-api:
+    <<: *service_default
+    container_name: exome-advisor-api
+    hostname: exome-advisor-api
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/medical/exome-coverage-advisor
+      dockerfile: Dockerfile.api
+    image: exome-advisor-api:latest
+    environment:
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # -- Exome Coverage Advisor Frontend (Streamlit) ---------------------------
+  exome-advisor-frontend:
+    <<: *service_default
+    container_name: exome-advisor-frontend
+    hostname: exome-advisor-frontend
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/medical/exome-coverage-advisor
+      dockerfile: Dockerfile.frontend
+    image: exome-advisor-frontend:latest
+    ports:
+      - "8401:8501"
+    environment:
+      API_URL: "http://exome-advisor-api:8000"
+    depends_on:
+      exome-advisor-api:
+        condition: service_healthy
+
+  # -- Flower (celery monitor) -----------------------------------------------
+  flower:
+    <<: *service_default
+    container_name: reev-flower
+    hostname: flower
+    image: mher/flower:latest
+    depends_on:
+      - rabbitmq
+    command:
+      - "celery"
+      - "--broker=amqp://guest@rabbitmq:5672//"
+      - "flower"
+
+# == Secrets =================================================================
+
+secrets:
+  db-password:
+    file: /home/arkantu/workspace/docker/genomic-stack/reev/secrets/db-password
+  pgadmin-password:
+    file: /home/arkantu/workspace/docker/genomic-stack/reev/secrets/pgadmin-password
+
+# == Networks ================================================================
+
+networks:
+  reev:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-reev

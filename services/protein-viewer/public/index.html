@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizador de Proteínas — Neuropediatría</title>
+
+  <!-- 3Dmol.js servido localmente (descargado en Docker build) -->
+  <script src="/3Dmol-min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; height: 100vh; display: flex; flex-direction: column; }
+
+    header { background: #1e293b; border-bottom: 1px solid #334155; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+    header h1 { font-size: 1.1rem; font-weight: 600; color: #38bdf8; }
+    header .subtitle { font-size: 0.8rem; color: #94a3b8; }
+
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* Panel izquierdo — controles */
+    .sidebar { width: 340px; background: #1e293b; border-right: 1px solid #334155; display: flex; flex-direction: column; overflow-y: auto; flex-shrink: 0; }
+    .sidebar-section { padding: 16px; border-bottom: 1px solid #334155; }
+    .sidebar-section h2 { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.05em; margin-bottom: 10px; }
+
+    input, select, textarea { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 8px 10px; border-radius: 6px; font-size: 0.85rem; outline: none; }
+    input:focus, select:focus { border-color: #38bdf8; }
+    label { font-size: 0.8rem; color: #94a3b8; display: block; margin-bottom: 4px; margin-top: 8px; }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: none; transition: background 0.15s; }
+    .btn-primary { background: #0ea5e9; color: white; }
+    .btn-primary:hover { background: #0284c7; }
+    .btn-secondary { background: #334155; color: #e2e8f0; }
+    .btn-secondary:hover { background: #475569; }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+    .btn-group { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; }
+    .badge-p  { background: #dc2626; color: white; }
+    .badge-lp { background: #ea580c; color: white; }
+    .badge-vus{ background: #ca8a04; color: white; }
+    .badge-lb { background: #16a34a; color: white; }
+    .badge-b  { background: #15803d; color: white; }
+
+    .structure-info { background: #0f172a; border-radius: 8px; padding: 10px; margin-top: 8px; font-size: 0.8rem; }
+    .structure-info .field { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .structure-info .field span:first-child { color: #64748b; }
+    .structure-info .field span:last-child { color: #e2e8f0; font-weight: 500; }
+
+    .portal-links { display: flex; flex-direction: column; gap: 6px; }
+    .portal-link { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #0f172a; border-radius: 6px; text-decoration: none; color: #94a3b8; font-size: 0.8rem; transition: background 0.15s; }
+    .portal-link:hover { background: #1e3a5f; color: #38bdf8; }
+    .portal-link .icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    .predictor-list { display: flex; flex-direction: column; gap: 4px; }
+    .predictor-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: #0f172a; border-radius: 6px; font-size: 0.8rem; }
+    .predictor-item a { color: #38bdf8; text-decoration: none; }
+
+    .variant-input-group { display: flex; gap: 6px; }
+    .variant-input-group input { flex: 1; }
+    .variant-input-group input.small { flex: 0 0 70px; }
+
+    .alert-banner { background: #7c3aed22; border: 1px solid #7c3aed; border-radius: 8px; padding: 10px 12px; font-size: 0.82rem; color: #c4b5fd; margin-top: 8px; }
+
+    .confidence-bar { height: 6px; border-radius: 3px; margin-top: 4px; }
+    .confidence-high { background: #22c55e; }
+    .confidence-med  { background: #f59e0b; }
+    .confidence-low  { background: #ef4444; }
+
+    /* Panel derecho — visualizador */
+    .viewer-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .viewer-tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; flex-shrink: 0; }
+    .tab { padding: 10px 18px; font-size: 0.85rem; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; }
+    .tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+
+    #molstar-container { flex: 1; position: relative; }
+    pdbe-molstar { width: 100%; height: 100%; display: block; }
+
+    .status-bar { background: #1e293b; border-top: 1px solid #334155; padding: 6px 16px; font-size: 0.75rem; color: #64748b; flex-shrink: 0; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🔬 Visualizador de Proteínas</h1>
+    <div class="subtitle">Laboratorio de Neuropediatría · AlphaFold + PDB + Mol*</div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+
+    <!-- Búsqueda por gen/proteína -->
+    <div class="sidebar-section">
+      <h2>🧬 Buscar proteína</h2>
+      <label>Gen (ej: SCN1A, KCNQ2, CACNA1A)</label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="gene-input" placeholder="SCN1A" value="SCN1A">
+        <button class="btn btn-primary btn-sm" onclick="searchByGene()">Buscar</button>
+      </div>
+      <div id="uniprot-results" class="hidden" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- Estructura cargada -->
+    <div class="sidebar-section" id="structure-panel" class="hidden">
+      <h2>📐 Estructura</h2>
+      <div id="structure-info" class="structure-info"></div>
+      <div class="btn-group">
+        <button class="btn btn-secondary btn-sm" onclick="resetView()">↺ Reset</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleSurface()">⬡ Superficie</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleLigands()">💊 Ligandos</button>
+      </div>
+    </div>
+
+    <!-- Mapear variante -->
+    <div class="sidebar-section">
+      <h2>📍 Mapear variante</h2>
+      <label>Posición en proteína (residuo)</label>
+      <input type="number" id="variant-pos" placeholder="ej: 1708" min="1">
+      <label>Cambio aminoácido (ref → alt)</label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="variant-ref" placeholder="Ref aa" class="small" style="flex:1">
+        <span style="align-self:center;color:#64748b">→</span>
+        <input type="text" id="variant-alt" placeholder="Alt aa" class="small" style="flex:1">
+      </div>
+      <label>HGVS p. (opcional)</label>
+      <input type="text" id="variant-hgvs" placeholder="ej: p.Ala1708Glu">
+      <label>Clasificación ACMG</label>
+      <select id="variant-acmg">
+        <option value="">— Sin especificar —</option>
+        <option value="Pathogenic">Patogénica</option>
+        <option value="Likely_pathogenic">Probablemente patogénica</option>
+        <option value="Uncertain_significance">VUS</option>
+        <option value="Likely_benign">Probablemente benigna</option>
+        <option value="Benign">Benigna</option>
+      </select>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="highlightVariant()">Resaltar + AlphaMissense</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearHighlight()">Limpiar</button>
+      </div>
+      <div id="alphamissense-result" class="hidden" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- Portales gen-específicos -->
+    <div class="sidebar-section">
+      <h2>🌐 Portales externos</h2>
+      <div id="portal-links" class="portal-links">
+        <div style="color:#475569;font-size:0.8rem;">Busca un gen para ver portales relevantes</div>
+      </div>
+    </div>
+
+    <!-- Predictores de patogenicidad -->
+    <div class="sidebar-section">
+      <h2>🎯 Predictores de patogenicidad</h2>
+      <label>Variante genómica (GRCh38)</label>
+      <div class="variant-input-group">
+        <input type="text" id="pred-chrom" placeholder="Chr" class="small" value="">
+        <input type="text" id="pred-pos" placeholder="Pos" class="small">
+        <input type="text" id="pred-ref" placeholder="Ref" class="small">
+        <input type="text" id="pred-alt" placeholder="Alt" class="small">
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="loadPredictors()">Ver predictores</button>
+      <div id="predictor-list" class="predictor-list" style="margin-top:8px;"></div>
+    </div>
+
+  </aside>
+
+  <!-- ── Viewer ──────────────────────────────────────────────────── -->
+  <div class="viewer-area">
+    <div class="viewer-tabs">
+      <div class="tab active" onclick="switchTab('3d')">🔬 3D Mol*</div>
+      <div class="tab" onclick="switchTab('pae')">📊 PAE AlphaFold</div>
+    </div>
+
+    <div id="molstar-container">
+      <div id="viewer-3d" style="width:100%;height:100%;position:relative;"></div>
+    </div>
+
+    <div id="pae-container" class="hidden" style="flex:1;display:flex;align-items:center;justify-content:center;background:#0f172a;">
+      <img id="pae-image" src="" alt="PAE plot" style="max-height:90%;max-width:90%;border-radius:8px;">
+    </div>
+
+    <div class="status-bar" id="status-bar">Listo · Busca un gen para comenzar</div>
+  </div>
+
+</div>
+
+<script>
+const API = ""; // mismo origen
+
+let currentGene    = null;
+let currentUniprot = null;
+let currentStructure = null;
+let viewer3d = null;
+
+// ── Inicialización ───────────────────────────────────────────────────────────
+
+document.addEventListener("DOMContentLoaded", () => {
+  viewer3d = $3Dmol.createViewer(document.getElementById("viewer-3d"), {
+    backgroundColor: "0x0f172a",
+    antialias: true,
+  });
+  searchByGene();
+});
+
+// ── Búsqueda por gen ─────────────────────────────────────────────────────────
+
+async function searchByGene() {
+  const gene = document.getElementById("gene-input").value.trim().toUpperCase();
+  if (!gene) return;
+  currentGene = gene;
+  setStatus(`Buscando ${gene} en UniProt...`);
+
+  try {
+    const results = await apiFetch(`/api/uniprot/search?gene=${gene}&organism=9606`);
+    showUniprotResults(results, gene);
+    loadPortals(gene);
+  } catch (e) {
+    setStatus(`Error buscando ${gene}: ${e.message}`);
+  }
+}
+
+function showUniprotResults(results, gene) {
+  const div = document.getElementById("uniprot-results");
+  if (!results.length) {
+    div.innerHTML = `<div style="color:#ef4444;font-size:0.8rem;">No encontrado en UniProt</div>`;
+    div.classList.remove("hidden");
+    return;
+  }
+
+  div.innerHTML = results.map(r => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;
+                background:#0f172a;border-radius:6px;margin-bottom:4px;cursor:pointer;"
+         onclick="loadAlphaFold('${r.accession}', '${r.gene || gene}', '${r.protein || ""}', ${r.length || 0})">
+      <div>
+        <div style="font-size:0.82rem;font-weight:600;color:#e2e8f0">${r.gene || gene}</div>
+        <div style="font-size:0.72rem;color:#64748b">${r.accession} · ${r.protein || ""}</div>
+      </div>
+      <span style="font-size:0.72rem;color:#38bdf8">${r.length || "?"} aa</span>
+    </div>
+  `).join("");
+  div.classList.remove("hidden");
+
+  // Auto-cargar el primero
+  const first = results[0];
+  loadAlphaFold(first.accession, first.gene || gene, first.protein || "", first.length || 0);
+}
+
+// ── Cargar AlphaFold ─────────────────────────────────────────────────────────
+
+async function loadAlphaFold(uniprotId, gene, protein, length) {
+  currentUniprot = uniprotId;
+  setStatus(`Cargando estructura AlphaFold para ${gene} (${uniprotId})...`);
+
+  try {
+    const af = await apiFetch(`/api/alphafold/${uniprotId}`);
+    currentStructure = af;
+
+    // Cargar en 3Dmol vía proxy local (evita CORS y CDN externos)
+    viewer3d.clear();
+    const cifText = await fetch(`/api/cif/alphafold/${uniprotId}`).then(r => {
+      if (!r.ok) throw new Error(`CIF ${r.status}`);
+      return r.text();
+    });
+    viewer3d.addModel(cifText, "cif");
+    viewer3d.setStyle({}, { cartoon: { color: "spectrum" } });
+    viewer3d.zoomTo();
+    viewer3d.render();
+    setStatus(`✅ ${gene} · AlphaFold v${af.latestVersion || "?"} · ${length} aa`);
+
+    // Info panel
+    const confidence = af.confidenceAvgLocalScore;
+    const confClass = confidence > 70 ? "high" : confidence > 50 ? "med" : "low";
+    document.getElementById("structure-info").innerHTML = `
+      <div class="field"><span>Gen</span><span>${gene}</span></div>
+      <div class="field"><span>UniProt</span><span>${uniprotId}</span></div>
+      <div class="field"><span>Proteína</span><span style="font-size:0.75rem">${protein.substring(0, 40)}${protein.length > 40 ? "…" : ""}</span></div>
+      <div class="field"><span>Longitud</span><span>${length} aa</span></div>
+      <div class="field"><span>Fuente</span><span>AlphaFold v${af.latestVersion || "?"}</span></div>
+      <div class="field"><span>Confianza (pLDDT)</span><span>${confidence?.toFixed(1) || "?"}</span></div>
+      <div class="confidence-bar confidence-${confClass}" style="width:${Math.min(confidence||50,100)}%"></div>
+    `;
+    if (af.paeImageUrl) document.getElementById("pae-image").src = af.paeImageUrl;
+
+  } catch (e) {
+    loadFromPDB(uniprotId, gene);
+  }
+}
+
+async function loadFromPDB(uniprotId, gene) {
+  setStatus(`AlphaFold no disponible, buscando en PDB para ${gene}...`);
+  try {
+    const pdbs = await apiFetch(`/api/pdb/${uniprotId}`);
+    if (!pdbs.length) { setStatus(`⚠️ No se encontró estructura para ${gene}`); return; }
+    const best = pdbs[0];
+    viewer3d.clear();
+    const cifText = await fetch(`/api/cif/pdb/${best.pdbId}`).then(r => {
+      if (!r.ok) throw new Error(`CIF ${r.status}`);
+      return r.text();
+    });
+    viewer3d.addModel(cifText, "cif");
+    viewer3d.setStyle({}, { cartoon: { color: "spectrum" } });
+    viewer3d.zoomTo();
+    viewer3d.render();
+    setStatus(`📦 ${gene} · PDB: ${best.pdbId} · ${best.method} · ${best.resolution ? best.resolution.toFixed(2) + " Å" : "?"}`);
+  } catch (e) {
+    setStatus(`Error cargando PDB: ${e.message}`);
+  }
+}
+
+// ── Highlight de variante ────────────────────────────────────────────────────
+
+async function highlightVariant() {
+  const pos = parseInt(document.getElementById("variant-pos").value);
+  const hgvs = document.getElementById("variant-hgvs").value;
+  const acmg = document.getElementById("variant-acmg").value;
+  const refAa = document.getElementById("variant-ref").value.toUpperCase();
+  const altAa = document.getElementById("variant-alt").value.toUpperCase();
+
+  if (!pos || !currentUniprot) {
+    alert("Carga una estructura primero e introduce la posición en proteína");
+    return;
+  }
+
+  const color = {
+    "Pathogenic": [220, 38, 38],
+    "Likely_pathogenic": [234, 88, 12],
+    "Uncertain_significance": [202, 138, 4],
+    "Likely_benign": [22, 163, 74],
+    "Benign": [21, 128, 63],
+  }[acmg] || [56, 189, 248];
+
+  // Highlight en 3Dmol
+  try {
+    viewer3d.setStyle({}, { cartoon: { color: "spectrum" } });          // reset
+    viewer3d.addStyle({ resi: pos }, {
+      cartoon: { color: `0x${color.map(c => c.toString(16).padStart(2,"0")).join("")}` },
+      stick:   { color: `0x${color.map(c => c.toString(16).padStart(2,"0")).join("")}`, radius: 0.3 },
+      sphere:  { color: `0x${color.map(c => c.toString(16).padStart(2,"0")).join("")}`, radius: 0.8 },
+    });
+    viewer3d.zoomTo({ resi: pos });
+    viewer3d.render();
+    setStatus(`📍 Residuo ${pos} resaltado${hgvs ? ` (${hgvs})` : ""}${acmg ? ` · ${acmg}` : ""}`);
+  } catch (e) {
+    setStatus(`Highlight: ${e.message}`);
+  }
+
+  // Buscar score AlphaMissense si hay ref + alt
+  const amDiv = document.getElementById("alphamissense-result");
+  if (refAa && altAa && currentUniprot) {
+    amDiv.classList.remove("hidden");
+    amDiv.innerHTML = `<div style="color:#64748b;font-size:0.8rem">⏳ Consultando AlphaMissense...</div>`;
+    try {
+      const data = await apiFetch(`/api/alphamissense/${currentUniprot}?pos=${pos}&ref=${refAa}&alt=${altAa}`);
+      if (data.rows.length > 0) {
+        const r = data.rows[0];
+        const cls = r.am_class || "unknown";
+        const clsColor = {
+          "likely_pathogenic": "#dc2626",
+          "ambiguous": "#ca8a04",
+          "likely_benign": "#16a34a",
+        }[cls] || "#64748b";
+        const score = r.am_pathogenicity?.toFixed(4);
+        amDiv.innerHTML = `
+          <div style="background:#0f172a;border-radius:6px;padding:8px 10px;">
+            <div style="font-size:0.72rem;color:#64748b;margin-bottom:4px">AlphaMissense (Google DeepMind)</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:1rem;font-weight:700;color:#e2e8f0">${score}</span>
+              <span style="font-size:0.75rem;font-weight:600;color:${clsColor};background:${clsColor}22;padding:2px 8px;border-radius:9999px">${cls}</span>
+            </div>
+            <div style="font-size:0.72rem;color:#64748b;margin-top:4px">${r.ref_aa}${pos}${r.alt_aa}</div>
+          </div>`;
+      } else {
+        amDiv.innerHTML = `<div style="color:#64748b;font-size:0.8rem">Sin score AlphaMissense para esta variante</div>`;
+      }
+    } catch (e) {
+      amDiv.innerHTML = `<div style="color:#ef4444;font-size:0.8rem">Error AlphaMissense: ${e.message}</div>`;
+    }
+  } else {
+    amDiv.classList.add("hidden");
+  }
+}
+
+function clearHighlight() {
+  if (viewer3d) { viewer3d.setStyle({}, { cartoon: { color: "spectrum" } }); viewer3d.render(); }
+  setStatus("Highlight eliminado");
+}
+
+function resetView() {
+  if (viewer3d) { viewer3d.zoomTo(); viewer3d.render(); }
+}
+
+function toggleSurface() {
+  if (viewer3d) {
+    viewer3d.addSurface($3Dmol.SurfaceType.SES, { opacity: 0.7, color: "white" });
+    viewer3d.render();
+  }
+}
+
+function toggleLigands() {
+  if (viewer3d) {
+    viewer3d.addStyle({ hetflag: true }, { stick: { colorscheme: "elementColors", radius: 0.3 } });
+    viewer3d.render();
+  }
+}
+
+// ── Portales externos ────────────────────────────────────────────────────────
+
+async function loadPortals(gene) {
+  try {
+    const data = await apiFetch(`/api/gene-portals/${gene}`);
+    const icons = {
+      lal_broad: "🧬", lovd: "🗃️", gnomad: "📊",
+      decipher: "🔍", omim: "📚", clinvar: "🏛️", uniprot: "🔗"
+    };
+    document.getElementById("portal-links").innerHTML = data.portals.map(p => `
+      <a href="${p.url}" target="_blank" rel="noopener" class="portal-link">
+        <span class="icon">${icons[p.type] || "🔗"}</span>
+        <span>${p.label}</span>
+        <span style="margin-left:auto;font-size:0.7rem;color:#475569">↗</span>
+      </a>
+    `).join("");
+  } catch (e) {
+    console.error("Error cargando portales:", e);
+  }
+}
+
+// ── Predictores ──────────────────────────────────────────────────────────────
+
+async function loadPredictors() {
+  const chrom = document.getElementById("pred-chrom").value.replace("chr", "");
+  const pos = document.getElementById("pred-pos").value;
+  const ref = document.getElementById("pred-ref").value;
+  const alt = document.getElementById("pred-alt").value;
+
+  if (!chrom || !pos || !ref || !alt) {
+    alert("Introduce chrom, pos, ref y alt");
+    return;
+  }
+
+  try {
+    const data = await apiFetch(`/api/predictors/${chrom}/${pos}/${ref}/${alt}`);
+    document.getElementById("predictor-list").innerHTML = data.predictors.map(p => `
+      <div class="predictor-item">
+        <div>
+          <div style="font-weight:600;color:#e2e8f0">${p.name}</div>
+          <div style="color:#64748b;font-size:0.72rem">${p.description}</div>
+        </div>
+        <a href="${p.url}" target="_blank" rel="noopener">Abrir ↗</a>
+      </div>
+    `).join("");
+  } catch (e) {
+    setStatus(`Error: ${e.message}`);
+  }
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  event.target.classList.add("active");
+
+  if (tab === "3d") {
+    document.getElementById("molstar-container").style.display = "flex";
+    document.getElementById("pae-container").classList.add("hidden");
+  } else {
+    document.getElementById("molstar-container").style.display = "none";
+    document.getElementById("pae-container").classList.remove("hidden");
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+async function apiFetch(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || res.statusText);
+  }
+  return res.json();
+}
+
+function setStatus(msg) {
+  document.getElementById("status-bar").textContent = msg;
+}
+</script>
+</body>
+</html>

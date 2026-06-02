@@ -1,0 +1,6 @@
+{
+  "base_url": "https://TU_URL_INTEGRADOR",
+  "timeout": 30,
+  "max_retries": 3,
+  "output_format": "json"
+}
