@@ -2,7 +2,7 @@
 import re
 from pathlib import Path
 
-DIAGRAMS_DIR = "/home/arkantu/workspace/docker/genomic-stack/services/neuropedgx-hub/public/diagrams"
+DIAGRAMS_DIR = "/home/arkantu/workspace/docker/genomic-stack/services/knowledgebase-hub/public/diagrams"
 
 TITLE_MAP = {
     'mtor.svg': 'mTORopatías — Vía PI3K/AKT/mTOR',

@@ -201,7 +201,7 @@ svg {
 
 ## Files Location
 
-📁 `/home/arkantu/workspace/docker/genomic-stack/services/neuropedgx-hub/public/diagrams/`
+📁 `/home/arkantu/workspace/docker/genomic-stack/services/knowledgebase-hub/public/diagrams/`
 
 - mtor.svg
 - channelopathy.svg

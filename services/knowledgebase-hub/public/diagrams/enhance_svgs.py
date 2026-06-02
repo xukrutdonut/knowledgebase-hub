@@ -3,7 +3,7 @@ import os
 import re
 from pathlib import Path
 
-DIAGRAMS_DIR = "/home/arkantu/workspace/docker/genomic-stack/services/neuropedgx-hub/public/diagrams"
+DIAGRAMS_DIR = "/home/arkantu/workspace/docker/genomic-stack/services/knowledgebase-hub/public/diagrams"
 
 def enhance_svg_for_responsiveness(content):
     """Enhance SVG for responsiveness and modern best practices"""

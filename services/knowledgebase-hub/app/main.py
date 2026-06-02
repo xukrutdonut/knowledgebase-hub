@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     reev_external_url: str = "https://reev.neuropedialab.org"
     variant_tracker_url: str = "http://variant-tracker:8000"
     gene_panel_path: Path = _APP_DIR / "data" / "gene_panel.yml"
-    db_path: Path = Path("/tmp/neuropedgx.db")
+    db_path: Path = Path("/tmp/knowledgebase.db")
 
     class Config:
         env_file = ".env"

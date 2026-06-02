@@ -65,12 +65,12 @@ Covering all 41 genetic neurological categories:
 
 ### File Location
 ```
-/home/arkantu/workspace/docker/genomic-stack/services/neuropedgx-hub/public/diagrams/
+/home/arkantu/workspace/docker/genomic-stack/services/knowledgebase-hub/public/diagrams/
 ```
 
 ### HTTP Access
 ```
-http://neuropedgx-hub:8080/diagrams/{filename}.svg?v=20260602201116
+http://knowledgebase-hub:8080/diagrams/{filename}.svg?v=20260602201116
 ```
 
 ### Supported Categories & Diagrams
@@ -149,9 +149,9 @@ Open the NeuropedGx Hub URL in an incognito/private window (no cache used)
 If running in Docker:
 ```bash
 cd /home/arkantu/workspace/docker/genomic-stack
-docker-compose restart neuropedgx-hub
+docker-compose restart knowledgebase-hub
 # or
-docker-compose down && docker-compose up -d neuropedgx-hub
+docker-compose down && docker-compose up -d knowledgebase-hub
 ```
 
 ---
@@ -180,7 +180,7 @@ After clearing cache, verify:
 5. Check if CDN caching is involved (if applicable)
 
 ### **Some Diagrams Missing**
-- Verify all files exist: `ls -la /home/arkantu/workspace/docker/genomic-stack/services/neuropedgx-hub/public/diagrams/`
+- Verify all files exist: `ls -la /home/arkantu/workspace/docker/genomic-stack/services/knowledgebase-hub/public/diagrams/`
 - Check HTTP server logs for 404 errors
 - Ensure proper file permissions (644)
 
