@@ -144,7 +144,7 @@ services:
       # HAVE_SEQREPO=false: deshabilita validación SeqRepo en Dotty.
       # El SeqRepo bihealth (v0.1.0) no contiene transcriptos NM_ → error al buscar p.ej. NM_006514.4:c.3361C>T
       # Cuando el rsync de biocommons (~75 GB) termine, cambiar a "true" para validación completa.
-      HAVE_SEQREPO: "false"
+      HAVE_SEQREPO: "true"
 
   # -- Mehari ----------------------------------------------------------------
   mehari:
@@ -305,23 +305,6 @@ services:
     ports:
       - "3006:80"
 
-  # -- OpenCRAVAT — anotación y predicción de patogenicidad modular ----------
-  # GUI web en :8080, 100+ anotadores (AlphaMissense, SpliceAI, CADD, REVEL…)
-  opencravat:
-    <<: *service_default
-    container_name: genomic-opencravat
-    hostname: opencravat
-    image: karchinlab/opencravat:latest
-    command: ["oc", "gui", "--headless", "--port", "8080", "--multiuser"]
-    ports:
-      - "8402:8080"
-    volumes:
-      - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/opencravat/data
-        target: /mnt/cravat
-    environment:
-      OC_MULTIUSER: "true"
-    restart: unless-stopped
 
   # -- Variant Tracker — almacenamiento + alertas de reclasificación ---------
   # API REST para gestionar variantes de pacientes y detectar cambios en
