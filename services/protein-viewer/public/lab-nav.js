@@ -1,24 +1,21 @@
 /**
- * lab-nav.js — Inyecta accesos directos a Lab Tools en la columna izquierda de REEV.
- * Servido desde https://protein.neuropedialab.org/lab-nav.js
+ * lab-nav.js — Inyecta botones "Open in Protein Viewer" y "Add to Variant Tracker"
+ * en la columna izquierda de REEV, al mismo nivel que "Jump in Local IGV".
+ * Servido desde https://reev.neuropedialab.org/lab-nav.js
  */
 (function () {
   'use strict';
 
-  const PROTEIN_URL  = 'https://protein.neuropedialab.org';
-  const TRACKER_URL  = 'https://tracker.neuropedialab.org';
-  const JBROWSE_URL  = 'https://jbrowse.neuropedialab.org';
+  const PROTEIN_URL = 'https://protein.neuropedialab.org';
+  const TRACKER_URL = 'https://tracker.neuropedialab.org';
 
-  // ── Extraer info de la variante desde la URL y el DOM ─────────────────────
+  // ── Extraer info de variante ───────────────────────────────────────────────
 
   function parseURL() {
     const path   = window.location.pathname;
-    const params = new URLSearchParams(window.location.search);
-    const orig   = params.get('orig') || '';
+    const orig   = new URLSearchParams(window.location.search).get('orig') || '';
 
-    // /seqvar/grch37-4-113568536-G-GA
     const seqvarMatch = path.match(/\/seqvar\/([^/?]+)/);
-    // /gene/SCN1A
     const geneMatch   = path.match(/\/gene\/([^/?]+)/);
 
     let coords = null;
@@ -29,36 +26,22 @@
       }
     }
 
-    // Extraer gen del HGVS original: "NM_001267039.1(LARP7):c.855dup" → LARP7
-    let geneFromOrig = null;
-    const geneRe = orig.match(/\(([A-Z][A-Z0-9-]+)\)/);
-    if (geneRe) geneFromOrig = geneRe[1];
-
-    // Extraer transcript del HGVS original: "NM_001267039.1(LARP7):c.855dup"
-    let transcriptFromOrig = null;
-    const txRe = orig.match(/^(NM_[0-9]+\.[0-9]+)/);
-    if (txRe) transcriptFromOrig = txRe[1];
-
-    // Extraer parte c. del HGVS
-    let hgvsC = null;
-    const hgvsCRe = orig.match(/(c\.[^\s]+)/);
-    if (hgvsCRe) hgvsC = hgvsCRe[1];
+    const geneRe      = orig.match(/\(([A-Z][A-Z0-9-]+)\)/);
+    const txRe        = orig.match(/^(NM_[0-9]+\.[0-9]+)/);
+    const hgvsCRe     = orig.match(/(c\.[^\s]+)/);
 
     return {
-      isSeqvar: !!seqvarMatch,
-      isGene:   !!geneMatch,
-      seqvarId: seqvarMatch ? seqvarMatch[1] : null,
-      geneURL:  geneMatch   ? geneMatch[1]   : null,
+      isSeqvar:          !!seqvarMatch,
+      geneURL:           geneMatch ? geneMatch[1] : null,
       coords,
       orig,
-      geneFromOrig,
-      transcriptFromOrig,
-      hgvsC,
+      geneFromOrig:      geneRe  ? geneRe[1]  : null,
+      transcriptFromOrig:txRe    ? txRe[1]    : null,
+      hgvsC:             hgvsCRe ? hgvsCRe[1] : null,
     };
   }
 
   function getGeneFromDOM() {
-    // En la columna izquierda, el gen se muestra en un <span class="font-italic">
     const spans = document.querySelectorAll('.v-list-item .font-italic');
     for (const s of spans) {
       const txt = s.textContent.trim();
@@ -67,122 +50,117 @@
     return null;
   }
 
+  // ── Construir URLs con parámetros ─────────────────────────────────────────
+
   function buildURLs(info) {
     const gene = info.geneURL || info.geneFromOrig || getGeneFromDOM() || '';
 
-    // Protein Viewer
     const proteinUrl = gene
       ? `${PROTEIN_URL}/?gene=${encodeURIComponent(gene)}`
       : PROTEIN_URL + '/';
 
-    // Variant Tracker — pre-rellena el formulario
-    let trackerParams = new URLSearchParams();
+    const tp = new URLSearchParams();
     if (info.coords) {
-      trackerParams.set('build', info.coords.build);
-      trackerParams.set('chrom', info.coords.chrom);
-      trackerParams.set('pos',   info.coords.pos);
-      trackerParams.set('ref',   info.coords.ref);
-      trackerParams.set('alt',   info.coords.alt);
+      tp.set('build', info.coords.build);
+      tp.set('chrom', info.coords.chrom);
+      tp.set('pos',   info.coords.pos);
+      tp.set('ref',   info.coords.ref);
+      tp.set('alt',   info.coords.alt);
     }
-    if (gene)                     trackerParams.set('gene',       gene);
-    if (info.hgvsC)               trackerParams.set('hgvs_c',     info.hgvsC);
-    if (info.transcriptFromOrig)  trackerParams.set('transcript', info.transcriptFromOrig);
-    const trackerUrl = `${TRACKER_URL}/?${trackerParams.toString()}`;
+    if (gene)                      tp.set('gene',       gene);
+    if (info.hgvsC)                tp.set('hgvs_c',     info.hgvsC);
+    if (info.transcriptFromOrig)   tp.set('transcript', info.transcriptFromOrig);
+    const trackerUrl = `${TRACKER_URL}/?${tp.toString()}`;
 
-    // JBrowse2
-    let jbrowseUrl = JBROWSE_URL + '/';
-    if (info.coords) {
-      jbrowseUrl += `?loc=${info.coords.chrom}:${info.coords.pos}`;
-    }
-
-    return { proteinUrl, trackerUrl, jbrowseUrl };
+    return { proteinUrl, trackerUrl };
   }
 
-  // ── Inyección en la columna izquierda ─────────────────────────────────────
+  // ── Inyección de botones ──────────────────────────────────────────────────
 
-  const SECTION_ID  = '__lab-nav-section__';
-  let   lastSeqvar  = '';
+  // Clases Vuetify idénticas al botón "Jump in Local IGV"
+  const BTN_CLASS = 'v-btn v-btn--density-default v-btn--size-default v-btn--variant-outlined ma-2';
 
-  function removeSection() {
-    document.getElementById(SECTION_ID)?.remove();
+  function makeBtn(icon, label, url) {
+    const btn = document.createElement('a');
+    btn.href   = url;
+    btn.target = '_blank';
+    btn.rel    = 'noopener';
+    btn.className = BTN_CLASS;
+    btn.style.cssText = 'text-decoration:none;display:inline-flex;width:calc(100% - 16px)';
+    btn.innerHTML = `
+      <span class="v-btn__overlay"></span>
+      <span class="v-btn__underlay"></span>
+      <i class="mdi ${icon} v-icon notranslate v-icon--size-default me-2" style="font-size:18px"></i>
+      <span class="v-btn__content" data-no-activator="">${label}</span>
+    `;
+    return btn;
   }
+
+  let injected    = false;
+  let lastVariant = '';
+  let observer    = null;
 
   function inject() {
-    // Sólo inyectar si hay items de navegación (seqvar o gene page)
-    const navItems = document.querySelectorAll('[id$="-nav"]');
-    if (!navItems.length) return false;
+    // Buscar el botón IGV por texto
+    let igvBtn = null;
+    document.querySelectorAll('.v-btn').forEach(el => {
+      if (el.textContent.includes('Jump in Local IGV')) igvBtn = el;
+    });
+    if (!igvBtn) return false;
 
     const info = parseURL();
-    const currentId = info.seqvarId || info.geneURL || window.location.pathname;
+    const currentId = info.coords
+      ? `${info.coords.chrom}-${info.coords.pos}-${info.coords.ref}-${info.coords.alt}`
+      : window.location.pathname;
 
-    // Evitar doble inyección para la misma variante
-    const existing = document.getElementById(SECTION_ID);
-    if (existing && lastSeqvar === currentId) return true;
-    existing?.remove();
-    lastSeqvar = currentId;
+    // Evitar doble inyección
+    if (injected && lastVariant === currentId) return true;
 
-    // Encontrar el v-list contenedor
-    const vList = navItems[0].closest('.v-list');
-    if (!vList) return false;
+    // Eliminar botones anteriores si la variante cambió
+    document.getElementById('__lab-protein-btn__')?.remove();
+    document.getElementById('__lab-tracker-btn__')?.remove();
+
+    lastVariant = currentId;
+    injected    = true;
 
     const urls = buildURLs(info);
-    const gene = info.geneURL || info.geneFromOrig || getGeneFromDOM() || '';
 
-    const div = document.createElement('div');
-    div.id = SECTION_ID;
-    div.style.cssText = 'border-top:1px solid rgba(255,255,255,.12);margin-top:8px;padding-top:6px';
-    div.innerHTML = `
-      <div style="padding:4px 16px 6px;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em">
-        🧬 Lab Tools
-      </div>
-      ${labLink('🔬', 'Protein Viewer', urls.proteinUrl, gene ? `Gen: ${gene}` : 'Visualizador 3D de proteínas')}
-      ${labLink('📊', 'Variant Tracker', urls.trackerUrl, 'Registrar y seguir esta variante')}
-      ${labLink('🧬', 'JBrowse2', urls.jbrowseUrl, info.coords ? `${info.coords.chrom}:${info.coords.pos}` : 'Navegador genómico')}
-    `;
-    vList.appendChild(div);
+    const pBtn = makeBtn('mdi-molecule', 'Open in Protein Viewer', urls.proteinUrl);
+    pBtn.id = '__lab-protein-btn__';
+
+    const tBtn = makeBtn('mdi-clipboard-list-outline', 'Add to Variant Tracker', urls.trackerUrl);
+    tBtn.id = '__lab-tracker-btn__';
+
+    igvBtn.insertAdjacentElement('afterend', tBtn);
+    igvBtn.insertAdjacentElement('afterend', pBtn);
+
     return true;
   }
 
-  function labLink(icon, label, url, tooltip) {
-    return `<a href="${url}" target="_blank" title="${tooltip}"
-      style="display:flex;align-items:center;gap:10px;padding:6px 16px;color:inherit;text-decoration:none;
-             font-size:13px;border-radius:4px;transition:background .12s"
-      onmouseover="this.style.background='rgba(255,255,255,.06)'"
-      onmouseout="this.style.background=''"
-    ><span style="font-size:16px;line-height:1">${icon}</span>${label}</a>`;
-  }
-
-  // ── Observer + SPA routing ─────────────────────────────────────────────────
-
-  let observer = null;
-
   function tryInject() {
     if (inject()) return;
-
-    // Aún no han renderizado los nav items — observar cambios
     if (observer) return;
     observer = new MutationObserver(() => {
-      if (inject()) {
-        observer.disconnect();
-        observer = null;
-      }
+      if (inject()) { observer.disconnect(); observer = null; }
     });
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  // Vue Router usa history.pushState para SPA navigation
-  const origPush = history.pushState.bind(history);
-  history.pushState = function (...args) {
-    origPush(...args);
-    removeSection();
+  function onNavigate() {
+    injected = false;
+    document.getElementById('__lab-protein-btn__')?.remove();
+    document.getElementById('__lab-tracker-btn__')?.remove();
     setTimeout(tryInject, 200);
-  };
-  window.addEventListener('popstate', () => { removeSection(); setTimeout(tryInject, 200); });
+  }
 
-  // Arrancar
+  const origPush = history.pushState.bind(history);
+  history.pushState = function (...args) { origPush(...args); onNavigate(); };
+  window.addEventListener('popstate', onNavigate);
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', tryInject);
   } else {
     tryInject();
   }
 })();
+
