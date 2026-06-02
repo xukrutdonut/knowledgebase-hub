@@ -1,7 +1,6 @@
 /**
  * lab-nav.js — Inyecta botones "Open in Protein Viewer" y "Add to Variant Tracker"
  * en la columna izquierda de REEV, al mismo nivel que "Jump in Local IGV".
- * Servido desde https://reev.neuropedialab.org/lab-nav.js
  */
 (function () {
   'use strict';
@@ -12,8 +11,8 @@
   // ── Extraer info de variante ───────────────────────────────────────────────
 
   function parseURL() {
-    const path   = window.location.pathname;
-    const orig   = new URLSearchParams(window.location.search).get('orig') || '';
+    const path = window.location.pathname;
+    const orig = new URLSearchParams(window.location.search).get('orig') || '';
 
     const seqvarMatch = path.match(/\/seqvar\/([^/?]+)/);
     const geneMatch   = path.match(/\/gene\/([^/?]+)/);
@@ -26,9 +25,9 @@
       }
     }
 
-    const geneRe      = orig.match(/\(([A-Z][A-Z0-9-]+)\)/);
-    const txRe        = orig.match(/^(NM_[0-9]+\.[0-9]+)/);
-    const hgvsCRe     = orig.match(/(c\.[^\s]+)/);
+    const geneRe  = orig.match(/\(([A-Z][A-Z0-9-]+)\)/);
+    const txRe    = orig.match(/^(NM_[0-9]+\.[0-9]+)/);
+    const hgvsCRe = orig.match(/(c\.[^\s]+)/);
 
     return {
       isSeqvar:          !!seqvarMatch,
@@ -42,15 +41,13 @@
   }
 
   function getGeneFromDOM() {
-    const spans = document.querySelectorAll('.v-list-item .font-italic');
+    const spans = document.querySelectorAll('.v-list-item .font-italic, .font-italic');
     for (const s of spans) {
       const txt = s.textContent.trim();
       if (txt && /^[A-Z][A-Z0-9-]+$/.test(txt) && txt.length > 1) return txt;
     }
     return null;
   }
-
-  // ── Construir URLs con parámetros ─────────────────────────────────────────
 
   function buildURLs(info) {
     const gene = info.geneURL || info.geneFromOrig || getGeneFromDOM() || '';
@@ -75,37 +72,54 @@
     return { proteinUrl, trackerUrl };
   }
 
-  // ── Inyección de botones ──────────────────────────────────────────────────
+  // ── Buscar el botón IGV (múltiples estrategias) ───────────────────────────
 
-  // Clases Vuetify idénticas al botón "Jump in Local IGV"
-  const BTN_CLASS = 'v-btn v-btn--density-default v-btn--size-default v-btn--variant-outlined ma-2';
+  function findIGVButton() {
+    // 1. Por icono mdi-launch (más fiable que por texto)
+    const byIcon = document.querySelector('.mdi-launch');
+    if (byIcon) return byIcon.closest('button, a[class*="v-btn"]') || byIcon.parentElement;
 
-  function makeBtn(icon, label, url) {
+    // 2. Por texto exacto en cualquier botón
+    for (const el of document.querySelectorAll('button, a')) {
+      if (el.textContent.includes('Jump in Local IGV')) return el;
+    }
+
+    // 3. Fallback: primer botón outlined en la columna sticky
+    const sticky = document.querySelector('[style*="sticky"]');
+    if (sticky) return sticky.querySelector('button, a');
+
+    return null;
+  }
+
+  // ── Crear botón estilo REEV ───────────────────────────────────────────────
+
+  function makeBtn(icon, label, url, id) {
     const btn = document.createElement('a');
+    btn.id     = id;
     btn.href   = url;
     btn.target = '_blank';
     btn.rel    = 'noopener';
-    btn.className = BTN_CLASS;
+    // Mismas clases Vuetify que el botón IGV
+    btn.className = 'v-btn v-btn--density-default v-btn--size-default v-btn--variant-outlined ma-2';
     btn.style.cssText = 'text-decoration:none;display:inline-flex;width:calc(100% - 16px)';
     btn.innerHTML = `
       <span class="v-btn__overlay"></span>
       <span class="v-btn__underlay"></span>
-      <i class="mdi ${icon} v-icon notranslate v-icon--size-default me-2" style="font-size:18px"></i>
-      <span class="v-btn__content" data-no-activator="">${label}</span>
+      <i class="mdi ${icon} v-icon notranslate v-icon--size-default" style="font-size:18px;margin-right:8px"></i>
+      <span class="v-btn__content">${label}</span>
     `;
     return btn;
   }
 
-  let injected    = false;
+  // ── Lógica principal de inyección ─────────────────────────────────────────
+
   let lastVariant = '';
-  let observer    = null;
 
   function inject() {
-    // Buscar el botón IGV por texto
-    let igvBtn = null;
-    document.querySelectorAll('.v-btn').forEach(el => {
-      if (el.textContent.includes('Jump in Local IGV')) igvBtn = el;
-    });
+    // Solo en páginas de variante o gen
+    if (!window.location.pathname.match(/\/(seqvar|gene)\//)) return false;
+
+    const igvBtn = findIGVButton();
     if (!igvBtn) return false;
 
     const info = parseURL();
@@ -113,23 +127,18 @@
       ? `${info.coords.chrom}-${info.coords.pos}-${info.coords.ref}-${info.coords.alt}`
       : window.location.pathname;
 
-    // Evitar doble inyección
-    if (injected && lastVariant === currentId) return true;
+    // Ya inyectado para esta variante
+    if (document.getElementById('__lab-protein-btn__') && lastVariant === currentId) return true;
 
-    // Eliminar botones anteriores si la variante cambió
+    // Limpiar inyección previa si es otra variante
     document.getElementById('__lab-protein-btn__')?.remove();
     document.getElementById('__lab-tracker-btn__')?.remove();
 
     lastVariant = currentId;
-    injected    = true;
 
-    const urls = buildURLs(info);
-
-    const pBtn = makeBtn('mdi-molecule', 'Open in Protein Viewer', urls.proteinUrl);
-    pBtn.id = '__lab-protein-btn__';
-
-    const tBtn = makeBtn('mdi-clipboard-list-outline', 'Add to Variant Tracker', urls.trackerUrl);
-    tBtn.id = '__lab-tracker-btn__';
+    const urls  = buildURLs(info);
+    const pBtn  = makeBtn('mdi-molecule',              'Open in Protein Viewer',  urls.proteinUrl, '__lab-protein-btn__');
+    const tBtn  = makeBtn('mdi-clipboard-list-outline','Add to Variant Tracker',  urls.trackerUrl, '__lab-tracker-btn__');
 
     igvBtn.insertAdjacentElement('afterend', tBtn);
     igvBtn.insertAdjacentElement('afterend', pBtn);
@@ -137,30 +146,37 @@
     return true;
   }
 
-  function tryInject() {
-    if (inject()) return;
-    if (observer) return;
-    observer = new MutationObserver(() => {
-      if (inject()) { observer.disconnect(); observer = null; }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+  // ── Polling robusto (cada 400 ms, máx 30 s) ───────────────────────────────
+
+  let pollTimer = null;
+  let pollCount = 0;
+
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollCount = 0;
+    pollTimer = setInterval(() => {
+      pollCount++;
+      if (inject() || pollCount > 75) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    }, 400);
   }
 
   function onNavigate() {
-    injected = false;
     document.getElementById('__lab-protein-btn__')?.remove();
     document.getElementById('__lab-tracker-btn__')?.remove();
-    setTimeout(tryInject, 200);
+    lastVariant = '';
+    startPolling();
   }
 
+  // Interceptar navegación Vue Router
   const origPush = history.pushState.bind(history);
-  history.pushState = function (...args) { origPush(...args); onNavigate(); };
+  history.pushState = function (...args) { origPush(...args); setTimeout(onNavigate, 50); };
   window.addEventListener('popstate', onNavigate);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', tryInject);
-  } else {
-    tryInject();
-  }
+  // Arrancar al cargar
+  startPolling();
 })();
+
 
