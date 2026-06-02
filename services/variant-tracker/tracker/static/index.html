@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Variant Tracker — Neuropediatría</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+    header{background:#1e293b;border-bottom:1px solid #334155;padding:14px 24px;display:flex;align-items:center;gap:16px}
+    header h1{font-size:1.1rem;font-weight:600;color:#38bdf8}
+    header .subtitle{font-size:0.8rem;color:#94a3b8}
+    .tabs{display:flex;background:#1e293b;border-bottom:1px solid #334155;padding:0 24px}
+    .tab{padding:12px 20px;font-size:0.85rem;cursor:pointer;border-bottom:2px solid transparent;color:#94a3b8;transition:all .15s}
+    .tab.active{color:#38bdf8;border-bottom-color:#38bdf8}
+    .panel{display:none;padding:24px;max-width:900px;margin:0 auto}
+    .panel.active{display:block}
+    .card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:20px;margin-bottom:16px}
+    .card h2{font-size:0.9rem;font-weight:600;margin-bottom:16px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+    label{font-size:0.78rem;color:#64748b;display:block;margin-bottom:4px;margin-top:10px}
+    label:first-child{margin-top:0}
+    input,select,textarea{width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px 10px;border-radius:6px;font-size:0.85rem;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:#38bdf8}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:6px;font-size:0.85rem;font-weight:500;cursor:pointer;border:none;transition:background .15s}
+    .btn-primary{background:#0ea5e9;color:white}
+    .btn-primary:hover{background:#0284c7}
+    .btn-danger{background:#dc2626;color:white}
+    .btn-danger:hover{background:#b91c1c}
+    .btn-sm{padding:5px 10px;font-size:0.78rem}
+    .actions{margin-top:16px;display:flex;gap:8px}
+    .badge{display:inline-block;padding:2px 8px;border-radius:9999px;font-size:0.72rem;font-weight:600}
+    .badge-P{background:#dc2626;color:white}
+    .badge-LP{background:#ea580c;color:white}
+    .badge-VUS{background:#ca8a04;color:white}
+    .badge-LB{background:#16a34a;color:white}
+    .badge-B{background:#15803d;color:white}
+    .badge-U{background:#475569;color:white}
+    table{width:100%;border-collapse:collapse;font-size:0.82rem}
+    th{text-align:left;padding:8px 12px;background:#0f172a;color:#64748b;font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #334155}
+    td{padding:10px 12px;border-bottom:1px solid #1e293b}
+    tr:hover td{background:#1e293b}
+    .alert-row td{background:#1c1108}
+    .empty{color:#475569;font-style:italic;text-align:center;padding:32px}
+    .msg{padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:0.85rem}
+    .msg-ok{background:#14532d;color:#86efac;border:1px solid #166534}
+    .msg-err{background:#450a0a;color:#fca5a5;border:1px solid #7f1d1d}
+    #msg{display:none}
+    .chip{display:inline-block;padding:1px 8px;border-radius:4px;font-size:0.72rem;background:#334155;color:#cbd5e1;margin:2px}
+    a.link-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;background:#1d4ed8;color:#fff;text-decoration:none;font-size:0.78rem}
+    a.link-btn:hover{background:#1e40af}
+  </style>
+</head>
+<body>
+
+<header>
+  <span style="font-size:1.8rem">📊</span>
+  <div>
+    <h1>Variant Tracker</h1>
+    <div class="subtitle">Seguimiento de variantes · Alertas de reclasificación ClinVar</div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('add')">➕ Registrar variante</div>
+  <div class="tab" onclick="switchTab('list')">📋 Variantes seguidas</div>
+  <div class="tab" onclick="switchTab('alerts')">🔔 Alertas</div>
+</div>
+
+<div id="msg" class="msg"></div>
+
+<!-- ── Panel: Añadir variante ─────────────────────────────────────────────── -->
+<div id="panel-add" class="panel active">
+  <div class="card">
+    <h2>Datos de la variante</h2>
+    <div class="grid cols-3">
+      <div>
+        <label>Genoma</label>
+        <select id="f-build"><option value="grch38">GRCh38</option><option value="grch37">GRCh37</option></select>
+      </div>
+      <div>
+        <label>Cromosoma</label>
+        <input id="f-chrom" placeholder="Ej: 1, X, MT">
+      </div>
+      <div>
+        <label>Posición</label>
+        <input id="f-pos" type="number" placeholder="Ej: 6174804">
+      </div>
+    </div>
+    <div class="grid">
+      <div>
+        <label>Referencia (REF)</label>
+        <input id="f-ref" placeholder="Ej: G">
+      </div>
+      <div>
+        <label>Alternativo (ALT)</label>
+        <input id="f-alt" placeholder="Ej: A">
+      </div>
+    </div>
+    <div class="grid">
+      <div>
+        <label>Gen</label>
+        <input id="f-gene" placeholder="Ej: SCN1A">
+      </div>
+      <div>
+        <label>Transcrito</label>
+        <input id="f-transcript" placeholder="Ej: NM_006920.6">
+      </div>
+    </div>
+    <div class="grid">
+      <div>
+        <label>HGVS cDNA</label>
+        <input id="f-hgvs-c" placeholder="Ej: c.5015T>C">
+      </div>
+      <div>
+        <label>HGVS proteína</label>
+        <input id="f-hgvs-p" placeholder="Ej: p.Ile1672Thr">
+      </div>
+    </div>
+    <div class="grid">
+      <div>
+        <label>Clasificación ACMG</label>
+        <select id="f-acmg">
+          <option value="unknown">Desconocida</option>
+          <option value="pathogenic">Patogénica</option>
+          <option value="likely_pathogenic">Probablemente patogénica</option>
+          <option value="uncertain_significance">VUS</option>
+          <option value="likely_benign">Probablemente benigna</option>
+          <option value="benign">Benigna</option>
+        </select>
+      </div>
+      <div>
+        <label>ClinVar Allele ID</label>
+        <input id="f-clinvar-id" placeholder="Opcional">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Datos del paciente</h2>
+    <div class="grid">
+      <div>
+        <label>Pseudónimo del paciente *</label>
+        <input id="f-patient" placeholder="Ej: PAC-001 o iniciales">
+      </div>
+      <div>
+        <label>Cigosidad</label>
+        <select id="f-zygosity">
+          <option value="">—</option>
+          <option value="heterozygous">Heterocigoto</option>
+          <option value="homozygous">Homocigoto</option>
+          <option value="hemizygous">Hemicigoto</option>
+          <option value="compound_het">Heterocigoto compuesto</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid">
+      <div>
+        <label>Herencia</label>
+        <input id="f-inheritance" placeholder="Ej: de novo, AD, AR">
+      </div>
+      <div>
+        <label>Términos HPO (separados por coma)</label>
+        <input id="f-hpo" placeholder="Ej: HP:0001250, HP:0001251">
+      </div>
+    </div>
+    <div>
+      <label>Notas clínicas</label>
+      <textarea id="f-notes" rows="3" placeholder="Notas adicionales..."></textarea>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" onclick="submitVariant()">💾 Registrar variante</button>
+      <button class="btn" style="background:#334155" onclick="clearForm()">✖ Limpiar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Panel: Lista ───────────────────────────────────────────────────────── -->
+<div id="panel-list" class="panel">
+  <div class="card" style="padding:12px 16px">
+    <table id="variants-table">
+      <thead>
+        <tr>
+          <th>Gen · Variante</th>
+          <th>Genoma · Coords</th>
+          <th>ACMG</th>
+          <th>ClinVar</th>
+          <th>Paciente</th>
+          <th>Registrada</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="variants-tbody"><tr><td colspan="7" class="empty">Cargando…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Panel: Alertas ─────────────────────────────────────────────────────── -->
+<div id="panel-alerts" class="panel">
+  <div class="card" style="padding:12px 16px">
+    <table>
+      <thead>
+        <tr>
+          <th>Gen · Variante</th>
+          <th>Cambio</th>
+          <th>Detectado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="alerts-tbody"><tr><td colspan="4" class="empty">Cargando…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['add','list','alerts'][i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if (tab === 'list') loadVariants();
+  if (tab === 'alerts') loadAlerts();
+}
+
+// ── Mensajes ──────────────────────────────────────────────────────────────────
+function showMsg(text, ok=true) {
+  const el = document.getElementById('msg');
+  el.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.margin = '12px 24px 0';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ── Pre-rellenar desde URL params (llamado desde REEV) ────────────────────────
+function prefillFromURL() {
+  const p = new URLSearchParams(window.location.search);
+
+  // ?build=grch37&chrom=4&pos=113568536&ref=G&alt=GA&gene=LARP7&hgvs_c=c.855dup&transcript=NM_001267039.1
+  if (p.get('build'))      document.getElementById('f-build').value = p.get('build');
+  if (p.get('chrom'))      document.getElementById('f-chrom').value = p.get('chrom');
+  if (p.get('pos'))        document.getElementById('f-pos').value   = p.get('pos');
+  if (p.get('ref'))        document.getElementById('f-ref').value   = p.get('ref');
+  if (p.get('alt'))        document.getElementById('f-alt').value   = p.get('alt');
+  if (p.get('gene'))       document.getElementById('f-gene').value  = p.get('gene');
+  if (p.get('transcript')) document.getElementById('f-transcript').value = p.get('transcript');
+  if (p.get('hgvs_c'))    document.getElementById('f-hgvs-c').value = p.get('hgvs_c');
+  if (p.get('hgvs_p'))    document.getElementById('f-hgvs-p').value = p.get('hgvs_p');
+}
+
+// ── Submit variante ───────────────────────────────────────────────────────────
+async function submitVariant() {
+  const patient = document.getElementById('f-patient').value.trim();
+  if (!patient) { showMsg('El pseudónimo del paciente es obligatorio', false); return; }
+
+  const chrom = document.getElementById('f-chrom').value.trim();
+  const pos   = parseInt(document.getElementById('f-pos').value.trim());
+  const ref   = document.getElementById('f-ref').value.trim().toUpperCase();
+  const alt   = document.getElementById('f-alt').value.trim().toUpperCase();
+  if (!chrom || !pos || !ref || !alt) { showMsg('Cromosoma, posición, REF y ALT son obligatorios', false); return; }
+
+  const hpoRaw = document.getElementById('f-hpo').value.trim();
+  const hpo = hpoRaw ? hpoRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+  const body = {
+    genome_build: document.getElementById('f-build').value,
+    chrom, pos, ref, alt,
+    gene_symbol:      document.getElementById('f-gene').value.trim() || null,
+    hgvs_c:           document.getElementById('f-hgvs-c').value.trim() || null,
+    hgvs_p:           document.getElementById('f-hgvs-p').value.trim() || null,
+    transcript:       document.getElementById('f-transcript').value.trim() || null,
+    clinvar_allele_id:document.getElementById('f-clinvar-id').value.trim() || null,
+    current_acmg_class: document.getElementById('f-acmg').value,
+    patient_pseudonym: patient,
+    patient_hpo_terms: hpo,
+    zygosity:         document.getElementById('f-zygosity').value || null,
+    inheritance:      document.getElementById('f-inheritance').value.trim() || null,
+    notes:            document.getElementById('f-notes').value.trim() || null,
+  };
+
+  try {
+    const r = await fetch(`${API}/variants`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    if (!r.ok) { const e = await r.json(); showMsg('Error: ' + JSON.stringify(e.detail), false); return; }
+    const data = await r.json();
+    showMsg(`✅ Variante registrada (ID: ${data.id.slice(0,8)}…)`);
+    clearForm();
+  } catch(e) { showMsg('Error de red: ' + e.message, false); }
+}
+
+function clearForm() {
+  ['f-chrom','f-pos','f-ref','f-alt','f-gene','f-transcript','f-hgvs-c','f-hgvs-p','f-clinvar-id','f-patient','f-inheritance','f-hpo','f-notes'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-build').value = 'grch38';
+  document.getElementById('f-acmg').value = 'unknown';
+  document.getElementById('f-zygosity').value = '';
+}
+
+// ── Cargar variantes ──────────────────────────────────────────────────────────
+const ACMG_LABELS = {pathogenic:'P',likely_pathogenic:'LP',uncertain_significance:'VUS',likely_benign:'LB',benign:'B',unknown:'U'};
+
+async function loadVariants() {
+  const tbody = document.getElementById('variants-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="empty">Cargando…</td></tr>';
+  try {
+    const r = await fetch(`${API}/variants?limit=200`);
+    const data = await r.json();
+    if (!data.items?.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">No hay variantes registradas</td></tr>'; return; }
+    tbody.innerHTML = data.items.map(v => {
+      const label = ACMG_LABELS[v.current_acmg_class] || 'U';
+      const gene  = v.gene_symbol || '—';
+      const hgvs  = v.hgvs_c ? `<span class="chip">${v.hgvs_c}</span>` : '';
+      const coords = `${v.chrom}:${v.pos} ${v.ref}>${v.alt}`;
+      const date  = v.created_at ? v.created_at.slice(0,10) : '—';
+      const reevUrl = `https://reev.neuropedialab.org/seqvar/${v.genome_build}-${v.chrom}-${v.pos}-${v.ref}-${v.alt}`;
+      return `<tr>
+        <td><strong>${gene}</strong> ${hgvs}</td>
+        <td><small>${v.genome_build}</small><br>${coords}</td>
+        <td><span class="badge badge-${label}">${label}</span></td>
+        <td>${v.current_clinvar_sig || '—'}</td>
+        <td>${v.patient_pseudonym}</td>
+        <td><small>${date}</small></td>
+        <td><a href="${reevUrl}" target="_blank" class="link-btn">🔍 REEV</a></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="7" class="empty">Error: ${e.message}</td></tr>`; }
+}
+
+// ── Cargar alertas ────────────────────────────────────────────────────────────
+async function loadAlerts() {
+  const tbody = document.getElementById('alerts-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" class="empty">Cargando…</td></tr>';
+  try {
+    const r = await fetch(`${API}/alerts?limit=100`);
+    const data = await r.json();
+    if (!data.items?.length) { tbody.innerHTML = '<tr><td colspan="4" class="empty">Sin alertas pendientes</td></tr>'; return; }
+    tbody.innerHTML = data.items.map(a => {
+      const date = a.detected_at ? a.detected_at.slice(0,10) : '—';
+      const cls = a.is_breaking_change ? 'alert-row' : '';
+      return `<tr class="${cls}">
+        <td>${a.variant_key || '—'}</td>
+        <td>${a.change_summary || '—'}</td>
+        <td><small>${date}</small></td>
+        <td><button class="btn btn-sm" style="background:#334155" onclick="markRead('${a.id}')">✓ Leído</button></td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="4" class="empty">Error: ${e.message}</td></tr>`; }
+}
+
+async function markRead(id) {
+  await fetch(`${API}/alerts/${id}/read`, {method:'PATCH'});
+  loadAlerts();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+prefillFromURL();
+</script>
+</body>
+</html>

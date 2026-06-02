@@ -208,6 +208,11 @@ document.addEventListener("DOMContentLoaded", () => {
     backgroundColor: "0x0f172a",
     antialias: true,
   });
+  // Pre-fill gene from URL param ?gene=SYMBOL
+  const urlGene = new URLSearchParams(window.location.search).get("gene");
+  if (urlGene) {
+    document.getElementById("gene-input").value = urlGene.toUpperCase();
+  }
   searchByGene();
 });
 
