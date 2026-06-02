@@ -433,51 +433,59 @@ function groupIcon(id) {
 }
 
 // ── SVG pathway map ──────────────────────────────────────
-const SVG_MAP = {
-  channelopathy:         'channelopathy.svg',
-  transportopathy:       'transportopathy.svg',
-  neurotransmitter_defect: 'nt_synthesis.svg',
-  nt_synthesis:          'nt_synthesis.svg',
-  nt_vesicle:            'nt_synthesis.svg',
-  nt_reuptake:           'nt_synthesis.svg',
-  nt_catabolism:         'nt_synthesis.svg',
-  cofactor_nt:           'nt_synthesis.svg',
-  gaba_metabolism:       'nt_synthesis.svg',
-  nkh:                   'nt_synthesis.svg',
-  mitochondrial:         'mitochondrial.svg',
-  lysosomal:             'lysosomal.svg',
-  peroxisomal:           'peroxisomal.svg',
-  organic_acidemia:      'organic_acid.svg',
-  purine_metabolism:     'purine.svg',
-  creatine_disorder:     'creatine.svg',
-  rasopathy:             'rasopathy.svg',
-  cohesin_related:       'cohesin.svg',
-  tubulin_related:       'tubulin.svg',
-  chromatin_related:     'chromatin.svg',
-  transcription_factor:  'transcription.svg',
-  xlid:                  'xlid.svg',
-  id_syndromic:          'id_syndromic.svg',
-  id_nonsyndromic:       'id_nonsyndromic.svg',
-  microcephaly_primary:  'microcephaly.svg',
-  autism_specific:       'autism.svg',
-  other_ndd:            'other_ndd.svg',
-  dee:                  'dee.svg',
-  dystonia_primary:     'dystonia.svg',
-  mtoropathy:           'mtor.svg',
-  interferonopathy:     'interferonopathy.svg',
-  autoinflammatory_cns: 'interferonopathy.svg',
-  synapse_disorder:     'synapse.svg',
-  ciliopathy:           'cilium.svg',
-  muscular_dystrophy:   'dystrophin.svg',
-  congenital_md:        'dystrophin.svg',
-  congenital_myopathy:  'congenital_myopathy.svg',
-  myopathy_metabolic:   'myopathy.svg',
-  genetic_neuropathy:   'cmt.svg',
-  neuromuscular:        'neuromuscular.svg',
-  metabolic_other:      'metabolic.svg',
-  cdg:                  'cdg.svg',
-  leukodystrophy:       'leukodystrophy.svg',
+const KEGG_MAP = {
+  autism_specific                : 'hsa04010',  // MAPK signaling
+  autoinflammatory_cns           : 'hsa04060',  // Cytokine-receptor
+  cdg                            : 'hsa00510',  // N-Glycan biosynthesis
+  channelopathy                  : 'hsa04020',  // Calcium signaling
+  chromatin_remodeling           : 'hsa03040',  // Spliceosome
+  ciliopathy                     : 'hsa04961',  // Endocrine reabsorption
+  cofactor_nt                    : 'hsa00340',  // Histidine metabolism
+  cohesinopathy                  : 'hsa04110',  // Cell cycle
+  complement_neuro               : 'hsa04610',  // Complement cascade
+  congenital_md                  : 'hsa04814',  // Focal adhesion
+  congenital_myopathy            : 'hsa04814',
+  creatine_disorder              : 'hsa00330',  // Arginine & proline
+  dee                            : 'hsa04020',  // Calcium signaling
+  dna_repair                     : 'hsa03420',  // Nucleotide excision repair
+  dystonia                       : 'hsa04728',  // Dopaminergic synapse
+  gaba_metabolism                : 'hsa00251',  // Glutarate metabolism
+  genetic_neuropathy             : 'hsa04360',  // Axon guidance
+  genomic_cnv                    : 'hsa04110',  // Cell cycle
+  id_nonsyndromic                : 'hsa04010',  // MAPK signaling
+  id_syndromic                   : 'hsa04010',
+  imprinting_epigenetic          : 'hsa03040',  // Spliceosome
+  interferonopathy               : 'hsa04060',  // Cytokine-receptor
+  leukodystrophy                 : 'hsa03030',  // DNA replication
+  lysosomal                      : 'hsa04142',  // Lysosome
+  metabolic                      : 'hsa00240',  // Pyrimidine metabolism
+  metabolic_myopathy             : 'hsa00020',  // TCA cycle
+  microcephaly                   : 'hsa04110',  // Cell cycle
+  microtubulipathy               : 'hsa04812',  // Cytoskeleton
+  mitochondrial                  : 'hsa00020',  // Citric acid cycle
+  mtoropathy                     : 'hsa04150',  // mTOR signaling
+  muscular_dystrophy             : 'hsa04814',  // Focal adhesion
+  neuromuscular                  : 'hsa04725',  // Cholinergic synapse
+  neurotransmitter_defect        : 'hsa04080',  // Neuroactive ligand-receptor
+  nkh                            : 'hsa04725',  // Dopaminergic synapse
+  nt_catabolism                  : 'hsa00350',  // Tyrosine metabolism
+  nt_reuptake                    : 'hsa04080',
+  nt_synthesis                   : 'hsa04080',
+  nt_vesicle                     : 'hsa04130',  // SNARE interactions
+  organic_acidemia               : 'hsa00280',  // BCAA degradation
+  other_ndd                      : 'hsa04010',  // MAPK signaling
+  parkinsonism_early             : 'hsa04728',  // Dopaminergic synapse
+  peroxisomal                    : 'hsa00380',  // Tryptophan metabolism
+  purine_metabolism              : 'hsa00230',  // Purine metabolism
+  rasopathy                      : 'hsa04010',  // MAPK signaling
+  repeat_expansion               : 'hsa03041',  // Mitotic recombination
+  spastic_paraplegia             : 'hsa04360',  // Axon guidance
+  synaptopathy                   : 'hsa04725',  // Cholinergic synapse
+  transcription_factor           : 'hsa03000',  // Transcription
+  transportopathy                : 'hsa04020',  // Calcium signaling
+  xlid                           : 'hsa04010',  // MAPK signaling
 };
+
 
 // ── Load single gene card ─────────────────────────────────
 async function loadGene(symbol) {
@@ -524,21 +532,35 @@ function makeGenesClickable(container) {
   });
 }
 
-// ── Show pathway SVG for a group ─────────────────────────
+// ── Show KEGG pathway for a group ───────────────────────────
 async function showPathwaySVG(groupId) {
-  const svgFile = SVG_MAP[groupId];
+  const pathwayId = KEGG_MAP[groupId];
   const wrap = document.getElementById('pathwayWrap');
   if (!wrap) return;
-  if (!svgFile) { wrap.style.display = 'none'; return; }
+  if (!pathwayId) { wrap.style.display = 'none'; return; }
 
   try {
-    const res = await fetch(`/diagrams/${svgFile}?v=20260602210700`);
-    if (!res.ok) throw new Error('not found');
-    const svgText = await res.text();
     wrap.style.display = '';
-    wrap.innerHTML = svgText +
-      `<p class="svg-caption">Haz clic sobre cualquier gen subrayado para abrir su ficha clínica</p>`;
-    makeGenesClickable(wrap);
+    // Use KEGG REST API to get pathway image
+    const keggUrl = `https://www.kegg.jp/pathway/${pathwayId}`;
+    const keggImageUrl = `https://www.kegg.jp/pathway/map/${pathwayId}.png`;
+    
+    wrap.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <p style="margin-bottom: 15px; color: #666;">
+          <strong>Vía KEGG:</strong> ${pathwayId}
+        </p>
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
+          <img src="${keggImageUrl}" alt="KEGG Pathway ${pathwayId}" 
+               style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
+               onerror="this.parentElement.innerHTML = '<p style=\"color: #f87171; padding: 20px;\">No se pudo cargar el diagrama KEGG. <a href=\\"${keggUrl}\\" target=\\"_blank\\" style=\\"color: #3b7fbd;\\">[Ver en KEGG.jp]</a></p>'">
+        </div>
+        <p style="margin-top: 15px; font-size: 0.85rem; color: #999;">
+          Datos de <a href="${keggUrl}" target="_blank" style="color: #3b7fbd;">KEGG Pathway Database</a>
+        </p>
+      </div>
+      <p class="svg-caption">Acceder a KEGG para más detalles e interactividad</p>
+    `;
   } catch {
     wrap.style.display = 'none';
   }
