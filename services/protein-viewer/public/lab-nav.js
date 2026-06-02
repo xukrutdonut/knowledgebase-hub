@@ -1,164 +1,145 @@
 /**
- * lab-nav.js — Inyecta botones "Open in Protein Viewer" y "Add to Variant Tracker"
- * en la columna izquierda de REEV, al mismo nivel que "Jump in Local IGV".
+ * lab-nav.js v6 — Inyecta botones Lab Tools en columna izquierda de REEV.
+ * Usa console.error para visibilidad en DevTools aunque esté en modo Errors.
  */
+try {
 (function () {
   'use strict';
 
+  const V = 'v6';
   const PROTEIN_URL = 'https://protein.neuropedialab.org';
   const TRACKER_URL = 'https://tracker.neuropedialab.org';
+  const DBG = '[LabNav ' + V + ']';
 
-  // ── Extraer info de variante ───────────────────────────────────────────────
+  // Visual badge — confirma que el script se ejecuta
+  function showBadge(msg) {
+    const b = document.createElement('div');
+    b.id = '__labnav-badge__';
+    b.textContent = msg;
+    b.style.cssText = 'position:fixed;bottom:12px;right:12px;z-index:99999;background:#1565c0;color:#fff;padding:6px 12px;border-radius:6px;font-size:13px;font-family:sans-serif;pointer-events:none';
+    document.body?.appendChild(b);
+    setTimeout(() => b.remove(), 5000);
+  }
 
   function parseURL() {
     const path = window.location.pathname;
     const orig = new URLSearchParams(window.location.search).get('orig') || '';
-
     const seqvarMatch = path.match(/\/seqvar\/([^/?]+)/);
     const geneMatch   = path.match(/\/gene\/([^/?]+)/);
-
     let coords = null;
     if (seqvarMatch) {
-      const parts = seqvarMatch[1].split('-');
-      if (parts.length >= 5) {
-        coords = { build: parts[0], chrom: parts[1], pos: parts[2], ref: parts[3], alt: parts.slice(4).join('-') };
-      }
+      const p = seqvarMatch[1].split('-');
+      if (p.length >= 5) coords = { build:p[0], chrom:p[1], pos:p[2], ref:p[3], alt:p.slice(4).join('-') };
     }
-
     const geneRe  = orig.match(/\(([A-Z][A-Z0-9-]+)\)/);
     const txRe    = orig.match(/^(NM_[0-9]+\.[0-9]+)/);
     const hgvsCRe = orig.match(/(c\.[^\s]+)/);
-
     return {
-      isSeqvar:          !!seqvarMatch,
-      geneURL:           geneMatch ? geneMatch[1] : null,
-      coords,
-      orig,
-      geneFromOrig:      geneRe  ? geneRe[1]  : null,
-      transcriptFromOrig:txRe    ? txRe[1]    : null,
-      hgvsC:             hgvsCRe ? hgvsCRe[1] : null,
+      isSeqvar: !!seqvarMatch, isGene: !!geneMatch,
+      geneURL: geneMatch ? geneMatch[1] : null,
+      coords, orig,
+      geneFromOrig:       geneRe  ? geneRe[1]  : null,
+      transcriptFromOrig: txRe    ? txRe[1]    : null,
+      hgvsC:              hgvsCRe ? hgvsCRe[1] : null,
     };
   }
 
   function getGeneFromDOM() {
-    const spans = document.querySelectorAll('.v-list-item .font-italic, .font-italic');
-    for (const s of spans) {
-      const txt = s.textContent.trim();
-      if (txt && /^[A-Z][A-Z0-9-]+$/.test(txt) && txt.length > 1) return txt;
+    for (const s of document.querySelectorAll('.font-italic')) {
+      const t = s.textContent.trim();
+      if (t && /^[A-Z][A-Z0-9-]+$/.test(t) && t.length > 1) return t;
     }
     return null;
   }
 
   function buildURLs(info) {
     const gene = info.geneURL || info.geneFromOrig || getGeneFromDOM() || '';
-
-    const proteinUrl = gene
-      ? `${PROTEIN_URL}/?gene=${encodeURIComponent(gene)}`
-      : PROTEIN_URL + '/';
-
+    const proteinUrl = gene ? `${PROTEIN_URL}/?gene=${encodeURIComponent(gene)}` : PROTEIN_URL + '/';
     const tp = new URLSearchParams();
-    if (info.coords) {
-      tp.set('build', info.coords.build);
-      tp.set('chrom', info.coords.chrom);
-      tp.set('pos',   info.coords.pos);
-      tp.set('ref',   info.coords.ref);
-      tp.set('alt',   info.coords.alt);
-    }
-    if (gene)                      tp.set('gene',       gene);
-    if (info.hgvsC)                tp.set('hgvs_c',     info.hgvsC);
-    if (info.transcriptFromOrig)   tp.set('transcript', info.transcriptFromOrig);
-    const trackerUrl = `${TRACKER_URL}/?${tp.toString()}`;
-
-    return { proteinUrl, trackerUrl };
+    if (info.coords) { tp.set('build',info.coords.build); tp.set('chrom',info.coords.chrom); tp.set('pos',info.coords.pos); tp.set('ref',info.coords.ref); tp.set('alt',info.coords.alt); }
+    if (gene)                    tp.set('gene', gene);
+    if (info.hgvsC)              tp.set('hgvs_c', info.hgvsC);
+    if (info.transcriptFromOrig) tp.set('transcript', info.transcriptFromOrig);
+    return { proteinUrl, trackerUrl: `${TRACKER_URL}/?${tp}` };
   }
 
-  // ── Buscar el botón IGV (múltiples estrategias) ───────────────────────────
-
-  function findIGVButton() {
-    // 1. Por icono mdi-launch (más fiable que por texto)
-    const byIcon = document.querySelector('.mdi-launch');
-    if (byIcon) return byIcon.closest('button, a[class*="v-btn"]') || byIcon.parentElement;
-
-    // 2. Por texto exacto en cualquier botón
-    for (const el of document.querySelectorAll('button, a')) {
-      if (el.textContent.includes('Jump in Local IGV')) return el;
-    }
-
-    // 3. Fallback: primer botón outlined en la columna sticky
+  // Estrategias múltiples para encontrar el contenedor de navegación izquierda
+  function findNavContainer() {
+    // 1. Sticky div por style inline
     const sticky = document.querySelector('[style*="sticky"]');
-    if (sticky) return sticky.querySelector('button, a');
+    if (sticky) { console.error(DBG, 'findNav: sticky div found'); return sticky; }
 
+    // 2. Div padre del v-list principal
+    const vList = document.querySelector('.v-list');
+    if (vList) { console.error(DBG, 'findNav: v-list parent found'); return vList.parentElement; }
+
+    // 3. El v-navigation-drawer o aside izquierdo
+    const drawer = document.querySelector('.v-navigation-drawer, aside');
+    if (drawer) { console.error(DBG, 'findNav: drawer found'); return drawer; }
+
+    console.error(DBG, 'findNav: NONE found. body children:', document.body?.children?.length);
     return null;
   }
 
-  // ── Crear botón estilo REEV ───────────────────────────────────────────────
-
   function makeBtn(icon, label, url, id) {
     const btn = document.createElement('a');
-    btn.id     = id;
-    btn.href   = url;
-    btn.target = '_blank';
-    btn.rel    = 'noopener';
-    // Mismas clases Vuetify que el botón IGV
+    btn.id = id; btn.href = url; btn.target = '_blank'; btn.rel = 'noopener';
     btn.className = 'v-btn v-btn--density-default v-btn--size-default v-btn--variant-outlined ma-2';
-    btn.style.cssText = 'text-decoration:none;display:inline-flex;width:calc(100% - 16px)';
-    btn.innerHTML = `
-      <span class="v-btn__overlay"></span>
-      <span class="v-btn__underlay"></span>
-      <i class="mdi ${icon} v-icon notranslate v-icon--size-default" style="font-size:18px;margin-right:8px"></i>
-      <span class="v-btn__content">${label}</span>
-    `;
+    btn.style.cssText = 'text-decoration:none;display:inline-flex;align-items:center;width:calc(100% - 16px);margin-top:4px';
+    btn.innerHTML = `<span class="v-btn__overlay"></span><span class="v-btn__underlay"></span>` +
+      `<i class="mdi ${icon} v-icon notranslate v-icon--size-default" aria-hidden="true" style="font-size:18px;margin-right:8px"></i>` +
+      `<span class="v-btn__content" style="font-size:12px">${label}</span>`;
     return btn;
   }
-
-  // ── Lógica principal de inyección ─────────────────────────────────────────
 
   let lastVariant = '';
 
   function inject() {
-    // Solo en páginas de variante o gen
-    if (!window.location.pathname.match(/\/(seqvar|gene)\//)) return false;
+    const path = window.location.pathname;
+    if (!/\/(seqvar|gene)\//.test(path)) {
+      return false; // Página normal de REEV, sin botones adicionales
+    }
 
-    const igvBtn = findIGVButton();
-    if (!igvBtn) return false;
+    const nav = findNavContainer();
+    if (!nav) return false;
 
     const info = parseURL();
-    const currentId = info.coords
-      ? `${info.coords.chrom}-${info.coords.pos}-${info.coords.ref}-${info.coords.alt}`
-      : window.location.pathname;
+    const currentId = info.coords ? `${info.coords.chrom}-${info.coords.pos}` : path;
 
-    // Ya inyectado para esta variante
     if (document.getElementById('__lab-protein-btn__') && lastVariant === currentId) return true;
-
-    // Limpiar inyección previa si es otra variante
     document.getElementById('__lab-protein-btn__')?.remove();
     document.getElementById('__lab-tracker-btn__')?.remove();
-
     lastVariant = currentId;
 
-    const urls  = buildURLs(info);
-    const pBtn  = makeBtn('mdi-molecule',              'Open in Protein Viewer',  urls.proteinUrl, '__lab-protein-btn__');
-    const tBtn  = makeBtn('mdi-clipboard-list-outline','Add to Variant Tracker',  urls.trackerUrl, '__lab-tracker-btn__');
+    const urls = buildURLs(info);
+    console.error(DBG, 'Injecting buttons. Protein:', urls.proteinUrl.slice(0,60));
+    console.error(DBG, 'Nav container:', nav.tagName, nav.className?.slice(0,50));
 
-    igvBtn.insertAdjacentElement('afterend', tBtn);
-    igvBtn.insertAdjacentElement('afterend', pBtn);
+    const pBtn = makeBtn('mdi-molecule',               'Protein Viewer', urls.proteinUrl, '__lab-protein-btn__');
+    const tBtn = makeBtn('mdi-clipboard-list-outline', 'Variant Tracker', urls.trackerUrl, '__lab-tracker-btn__');
 
+    // Insertar después del v-list, dentro del contenedor sticky
+    const vListInNav = nav.querySelector('.v-list') || nav;
+    vListInNav.insertAdjacentElement('afterend', tBtn);
+    vListInNav.insertAdjacentElement('afterend', pBtn);
+
+    showBadge('✓ Lab Tools inyectados');
+    console.error(DBG, 'Done. Parent of pBtn:', pBtn.parentElement?.tagName, pBtn.parentElement?.className?.slice(0,40));
     return true;
   }
 
-  // ── Polling robusto (cada 400 ms, máx 30 s) ───────────────────────────────
-
-  let pollTimer = null;
-  let pollCount = 0;
-
+  let pollTimer = null, pollCount = 0;
   function startPolling() {
     if (pollTimer) clearInterval(pollTimer);
     pollCount = 0;
+    console.error(DBG, 'startPolling for:', window.location.pathname);
     pollTimer = setInterval(() => {
       pollCount++;
+      if (pollCount % 5 === 0) console.error(DBG, 'poll#' + pollCount, 'path:', window.location.pathname);
       if (inject() || pollCount > 75) {
         clearInterval(pollTimer);
         pollTimer = null;
+        if (pollCount > 75) console.error(DBG, 'Polling timeout — nav never found');
       }
     }, 400);
   }
@@ -167,16 +148,15 @@
     document.getElementById('__lab-protein-btn__')?.remove();
     document.getElementById('__lab-tracker-btn__')?.remove();
     lastVariant = '';
-    startPolling();
+    setTimeout(startPolling, 50);
   }
 
-  // Interceptar navegación Vue Router
   const origPush = history.pushState.bind(history);
-  history.pushState = function (...args) { origPush(...args); setTimeout(onNavigate, 50); };
+  history.pushState = function (...a) { origPush(...a); onNavigate(); };
   window.addEventListener('popstate', onNavigate);
 
-  // Arrancar al cargar
+  console.error(DBG, 'Script loaded. Path:', window.location.pathname);
+  showBadge('⚡ LabNav ' + V + ' cargado');
   startPolling();
 })();
-
-
+} catch(e) { console.error('[LabNav CRASH]', e.message, e.stack); }
