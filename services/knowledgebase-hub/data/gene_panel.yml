@@ -1600,6 +1600,7 @@ genes:
       - No hay tratamiento modificador establecido; manejo sintomático y multidisciplinar.
       urgency: monitoring
     uniprot: Q9NQ11
+    genereviews_id: NBK1223
   ATP1A2:
     clinical_labels:
     - epilepsy
@@ -1617,6 +1618,7 @@ genes:
     - Hemiplegia alternante + epilepsia (variantes de novo graves)
     symbol: ATP1A2
     uniprot: P50993
+    genereviews_id: NBK1388
   ATP1A3:
     clinical_labels:
     - epilepsy
@@ -1655,6 +1657,7 @@ genes:
       type: PMID
     symbol: ATP1A3
     uniprot: P13637
+    genereviews_id: NBK1115
   ATP6AP1:
     acmg_guidance:
     - criterion: PM2
@@ -1919,6 +1922,7 @@ genes:
     symbol: CACNA1A
     uniprot: O00555
     omim_code: '601011'
+    genereviews_id: NBK1388
   CACNA1C:
     clinical_labels:
     - intellectual_disability
@@ -2208,6 +2212,7 @@ genes:
       url: https://clinicalgenome.org/gene-validity/CDKL5
     symbol: CDKL5
     uniprot: O76039
+    genereviews_id: NBK602610
   CECR1:
     acmg_guidance:
     - criterion: PM3
@@ -3141,6 +3146,7 @@ genes:
     - Déficit de AADC (aromatic L-amino acid decarboxylase)
     symbol: DDC
     uniprot: P20711
+    genereviews_id: NBK595821
   DDX3X:
     clinical_labels:
     - intellectual_disability
@@ -4388,6 +4394,7 @@ genes:
     - Enfermedad de Gaucher tipo 1/2/3
     symbol: GBA
     uniprot: P04062
+    genereviews_id: NBK1223
   GCDH:
     acmg_guidance:
     - criterion: PS3
@@ -4453,6 +4460,7 @@ genes:
     symbol: GCH1
     uniprot: P30793
     omim_code: '600225'
+    genereviews_id: NBK1508
   GCSH:
     acmg_guidance: []
     clingen:
@@ -4732,6 +4740,7 @@ genes:
       urgency: urgent
     uniprot: P23415
     omim_code: '138491'
+    genereviews_id: NBK1260
   GLRB:
     acmg_guidance: []
     clingen:
@@ -4775,6 +4784,7 @@ genes:
       urgency: urgent
     uniprot: P48167
     omim_code: '138495'
+    genereviews_id: NBK1260
   GNAL:
     acmg_guidance:
     - criterion: PM2
@@ -4959,6 +4969,7 @@ genes:
     - Hipercinesia/movimientos anormales
     symbol: GRIN1
     uniprot: Q05586
+    genereviews_id: NBK542807
   GRIN2A:
     clinical_labels:
     - epilepsy
@@ -4978,6 +4989,7 @@ genes:
     symbol: GRIN2A
     uniprot: Q12879
     omim_code: '138250'
+    genereviews_id: NBK385627
   GRIN2B:
     clinical_labels:
     - dee
@@ -5002,6 +5014,7 @@ genes:
     symbol: GRIN2B
     uniprot: Q13224
     omim_code: '138251'
+    genereviews_id: NBK501979
   GYS1:
     clinical_labels:
     - neuromuscular
@@ -5766,6 +5779,7 @@ genes:
       - No hay tratamiento modificador establecido; manejo sintomático y multidisciplinar.
       urgency: monitoring
     uniprot: Q14643
+    genereviews_id: NBK1138
   IVD:
     acmg_guidance:
     - criterion: PM2
@@ -6102,6 +6116,7 @@ genes:
     symbol: KCNQ2
     uniprot: O43526
     omim_code: '602235'
+    genereviews_id: NBK32534
   KCNQ3:
     clinical_labels:
     - epilepsy
@@ -6119,6 +6134,7 @@ genes:
     symbol: KCNQ3
     uniprot: O43525
     omim_code: '602232'
+    genereviews_id: NBK201978
   KCNQ5:
     clinical_labels:
     - intellectual_disability
@@ -6165,6 +6181,7 @@ genes:
     symbol: KCNT1
     uniprot: O95259
     omim_code: '608202'
+    genereviews_id: NBK525917
   KCTD7:
     clinical_labels:
     - dee
@@ -6603,6 +6620,7 @@ genes:
       - No hay tratamiento modificador establecido; manejo sintomático y multidisciplinar.
       urgency: monitoring
     uniprot: Q5S007
+    genereviews_id: NBK1223
   LRSAM1:
     clinical_labels:
     - neuromuscular
@@ -6853,6 +6871,7 @@ genes:
     symbol: MECP2
     uniprot: P51608
     omim_code: '300005'
+    genereviews_id: NBK1497
   MED12:
     acmg_guidance:
     - criterion: PM2
@@ -7742,6 +7761,7 @@ genes:
     symbol: NF1
     uniprot: P21359
     omim_code: '162200'
+    genereviews_id: NBK1109
   NIPBL:
     acmg_guidance:
     - criterion: PVS1
@@ -9022,6 +9042,7 @@ genes:
       - No hay tratamiento modificador establecido; manejo sintomático y multidisciplinar.
       urgency: monitoring
     uniprot: Q9BXM7
+    genereviews_id: NBK1223
   PLA2G6:
     clinical_labels:
     - movement_disorder
@@ -9043,6 +9064,7 @@ genes:
     - Distrofia neuroaxonal infantil (INAD)
     symbol: PLA2G6
     uniprot: O60733
+    genereviews_id: NBK1675
   PLP1:
     clinical_labels:
     - leukodystrophy_phenotype
@@ -9066,6 +9088,7 @@ genes:
     symbol: PLP1
     uniprot: P60201
     omim_code: '300401'
+    genereviews_id: NBK1182
   PMM2:
     acmg_guidance:
     - criterion: PS3
@@ -9481,6 +9504,7 @@ genes:
       - No hay tratamiento modificador establecido; manejo sintomático y multidisciplinar.
       urgency: monitoring
     uniprot: O60260
+    genereviews_id: NBK1223
   PRRT2:
     clinical_labels:
     - epilepsy
@@ -9504,6 +9528,7 @@ genes:
     - Ataxia episódica
     symbol: PRRT2
     uniprot: P49761
+    genereviews_id: NBK475803
   PRSS12:
     clinical_labels:
     - DI no sindrómica AR
@@ -9585,6 +9610,7 @@ genes:
     symbol: PTEN
     uniprot: P60484
     omim_code: '601728'
+    genereviews_id: NBK1488
   PTPN11:
     clingen:
       gene_validity: Definitive
@@ -10309,6 +10335,7 @@ genes:
       type: PMID
     symbol: SCN1A
     uniprot: P35498
+    genereviews_id: NBK1318
   SCN2A:
     acmg_guidance:
     - criterion: PS2
@@ -10377,6 +10404,7 @@ genes:
     symbol: SCN3A
     uniprot: Q9NY46
     omim_code: '182391'
+    genereviews_id: NBK570882
   SCN8A:
     acmg_guidance:
     - criterion: PS2
@@ -10408,6 +10436,7 @@ genes:
     symbol: SCN8A
     uniprot: Q9UQD0
     omim_code: '600965'
+    genereviews_id: NBK379665
   SCN9A:
     clinical_labels:
     - neuropathy
@@ -11463,6 +11492,7 @@ genes:
     - Síndrome de deficiencia de GAT-1 (DEE)
     symbol: SLC6A1
     uniprot: P30531
+    genereviews_id: NBK589173
   SLC6A3:
     acmg_guidance:
     - criterion: PP4
@@ -11517,6 +11547,7 @@ genes:
       urgency: standard
     uniprot: Q01959
     omim_code: '126455'
+    genereviews_id: NBK442323
   SLC6A4:
     acmg_guidance:
     - criterion: PM1
@@ -12101,6 +12132,7 @@ genes:
       - BH4 (sapropterin) — no siempre necesario
       urgency: urgent
     uniprot: P35270
+    genereviews_id: NBK304122
   SPRED1:
     clinical_labels:
     - intellectual_disability
@@ -12292,6 +12324,7 @@ genes:
     - ESES/CSWS
     symbol: STXBP1
     uniprot: P61764
+    genereviews_id: NBK396561
   SURF1:
     clinical_labels:
     - epilepsy
@@ -12860,6 +12893,7 @@ genes:
     symbol: TSC1
     uniprot: Q92574
     omim_code: '605284'
+    genereviews_id: NBK1220
   TSC2:
     acmg_guidance:
     - criterion: PVS1
@@ -12890,6 +12924,7 @@ genes:
     symbol: TSC2
     uniprot: P49815
     omim_code: '191092'
+    genereviews_id: NBK1220
   TUBA1A:
     clinical_labels:
     - cortical_malformation
