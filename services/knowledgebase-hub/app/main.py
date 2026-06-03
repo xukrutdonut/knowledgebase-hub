@@ -54,7 +54,19 @@ def get_settings() -> Settings:
 DEFAULT_GROUP_METADATA: dict[str, dict[str, str]] = {
     # ── Canalopatías / Transportopatías ───────────────────────────────────────
     "channelopathy": {"label": "Canalopatías", "description": "Disfunción de canales iónicos (Na, K, Ca, Cl, HCN)"},
+    "channelopathy_sodium": {"label": "→ Canales de Sodio", "description": "Canalopatías de sodio (SCN1A, SCN1B, SCN2A, SCN8A, SCN9A)"},
+    "channelopathy_potassium": {"label": "→ Canales de Potasio", "description": "Canalopatías de potasio (KCNQ2, KCNQ3, KCNA1, KCNB1, KCNC1)"},
+    "channelopathy_calcium": {"label": "→ Canales de Calcio", "description": "Canalopatías de calcio (CACNA1A, CACNA1D, CACNA1E, CACNB4)"},
+    "channelopathy_chloride": {"label": "→ Canales de Cloro", "description": "Canalopatías de cloro (GABRG2, GABRA1, GABRD, SLC6A5)"},
+    "channelopathy_glutamate": {"label": "→ Receptores de Glutamato", "description": "Canalopatías de glutamato (GRIN1, GRIN2A, GRIN2B, GRM1)"},
+    "channelopathy_gaba": {"label": "→ Receptores de GABA", "description": "Canalopatías de GABA (GABRB2, GABRB3, GABRG2)"},
+    "channelopathy_glycine": {"label": "→ Receptores de Glicina", "description": "Canalopatías de glicina (GLRA1, SLC6A5)"},
     "transportopathy": {"label": "Transportopatías", "description": "Alteraciones de transportadores de membrana: SLC, ABC, ATPasas"},
+    "transportopathy_nt_reuptake": {"label": "→ Recaptación de NT", "description": "Transportadores de recaptación (SLC6A2, SLC6A3, SLC6A4)"},
+    "transportopathy_vesicular": {"label": "→ Transportadores Vesiculares", "description": "Transportadores vesiculares de NT (SLC18A2, SLC18A3)"},
+    "transportopathy_amino_acid": {"label": "→ Aminoácidos", "description": "Transportadores de aminoácidos (SLC7A5, SLC1A1, SLC25A12)"},
+    "transportopathy_ion_pumps": {"label": "→ Bombas Iónicas", "description": "ATPasas y bombas iónicas (ATP1A3, ATP1B2, ATP2A2)"},
+    "transportopathy_solute_carriers": {"label": "→ Otros SLC", "description": "Otros transportadores SLC (SLC25A1, SLC30A10, SLC9A6)"},
     # ── Errores NT & cofactores ───────────────────────────────────────────────
     "neurotransmitter_defect": {"label": "Errores NT (visión global)", "description": "Trastornos del metabolismo de neurotransmisores (marco García-Cazorla)"},
     "nt_synthesis": {"label": "Síntesis NT", "description": "Errores en síntesis de dopamina, serotonina, NA (GCH1, TH, SPR, AADC)"},
@@ -191,15 +203,51 @@ def build_sqlite_db(panel_path: Path, db_path: Path) -> sqlite3.Connection:
         ))
         for grp in data.get("mechanism_groups", []):
             cur.execute("INSERT OR IGNORE INTO gene_groups VALUES (?,?)", (symbol, grp))
+    
+    # Mapeo automático de genes a subcategorías de canalopatías y transportopatías
+    _map_subcategories(cur, genes)
 
-    _populate_groups(cur, panel.get("groups", []))
+    _populate_groups(cur, panel.get("groups") or None)
     conn.commit()
     logger.info(f"✅ Gene panel DB built: {len(genes)} genes")
     return conn
 
 
+
+
+def _map_subcategories(cur: sqlite3.Cursor, genes: dict[str, Any]):
+    """Mapea genes a subcategorías de canalopatías y transportopatías."""
+    # Canalopatías por tipo de canal iónico
+    channelopathy_subcat = {
+        "channelopathy_sodium": ["SCN1A", "SCN1B", "SCN2A", "SCN8A", "SCN9A"],
+        "channelopathy_potassium": ["KCNQ2", "KCNQ3", "KCNA1", "KCNB1", "KCNC1", "KCND2", "KCNF1", "KCNH1"],
+        "channelopathy_calcium": ["CACNA1A", "CACNA1D", "CACNA1E", "CACNB4", "CACNB2"],
+        "channelopathy_chloride": ["GABRG2", "GABRA1", "GABRD", "SLC6A5"],
+        "channelopathy_glutamate": ["GRIN1", "GRIN2A", "GRIN2B", "GRM1"],
+        "channelopathy_gaba": ["GABRB2", "GABRB3", "GABRG2", "GABRA1"],
+        "channelopathy_glycine": ["GLRA1", "SLC6A5"],
+    }
+    
+    # Transportopatías por tipo
+    transportopathy_subcat = {
+        "transportopathy_nt_reuptake": ["SLC6A2", "SLC6A3", "SLC6A4", "SLC6A1"],
+        "transportopathy_vesicular": ["SLC18A2", "SLC18A3"],
+        "transportopathy_amino_acid": ["SLC7A5", "SLC1A1", "SLC25A12"],
+        "transportopathy_ion_pumps": ["ATP1A3", "ATP1B2", "ATP2A2"],
+        "transportopathy_solute_carriers": ["SLC25A1", "SLC30A10", "SLC9A6", "ABCC8"],
+    }
+    
+    for subcat, gene_list in {**channelopathy_subcat, **transportopathy_subcat}.items():
+        for gene_symbol in gene_list:
+            if gene_symbol in genes:
+                cur.execute("INSERT OR IGNORE INTO gene_groups VALUES (?,?)", (gene_symbol, subcat))
+
+
 def _populate_groups(cur: sqlite3.Cursor, panel_groups: list[Any]):
-    configured_groups = panel_groups or list(DEFAULT_GROUP_METADATA)
+    if not panel_groups:
+        configured_groups = list(DEFAULT_GROUP_METADATA.keys())
+    else:
+        configured_groups = panel_groups
     seen: set[str] = set()
 
     for entry in configured_groups:

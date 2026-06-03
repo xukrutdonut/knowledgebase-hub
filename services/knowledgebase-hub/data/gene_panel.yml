@@ -13447,5 +13447,17 @@ groups:
 - autoinflammatory_cns
 - complement_neuro
 - id_syndromic
+- channelopathy_sodium
+- channelopathy_potassium
+- channelopathy_calcium
+- channelopathy_chloride
+- channelopathy_glutamate
+- channelopathy_gaba
+- channelopathy_glycine
+- transportopathy_nt_reuptake
+- transportopathy_vesicular
+- transportopathy_amino_acid
+- transportopathy_ion_pumps
+- transportopathy_solute_carriers
 source: ClinGen/GenCC/OMIM/PMID curation — Neuropediatrics Lab
 version: '2026.06'
