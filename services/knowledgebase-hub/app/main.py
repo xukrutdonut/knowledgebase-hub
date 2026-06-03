@@ -133,6 +133,8 @@ def build_sqlite_db(panel_path: Path, db_path: Path) -> sqlite3.Connection:
             name TEXT,
             hgnc_id TEXT,
             uniprot TEXT,
+            omim_code TEXT,
+            genereviews_id TEXT,
             mechanism_groups TEXT,   -- JSON array
             clinical_labels TEXT,    -- JSON array
             mechanism TEXT,          -- JSON array
@@ -166,12 +168,14 @@ def build_sqlite_db(panel_path: Path, db_path: Path) -> sqlite3.Connection:
     genes = panel.get("genes", {})
     for symbol, data in genes.items():
         cur.execute("""
-            INSERT OR REPLACE INTO genes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            INSERT OR REPLACE INTO genes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             symbol,
             data.get("name", ""),
             str(data.get("hgnc_id", "")),
             data.get("uniprot", ""),
+            data.get("omim_code", ""),
+            data.get("genereviews_id", ""),
             json.dumps(data.get("mechanism_groups", [])),
             json.dumps(data.get("clinical_labels", [])),
             json.dumps(data.get("mechanism", [])),
@@ -237,6 +241,8 @@ class GeneInfo(BaseModel):
     name: str
     hgnc_id: str
     uniprot: str | None
+    omim_code: str | None = None
+    genereviews_id: str | None = None
     mechanism_groups: list[str]
     clinical_labels: list[str]
     mechanism: list[str]
@@ -299,11 +305,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="NeuropedGx Hub",
+    title="knowledgeDB.neuropediaLAB",
     description=(
         "Panel genético neuropediátrico multi-grupo: canalopatías, rasopatías, "
         "mTORopatías, cohesinopías, microtubulopatías y más. "
-        "Capa de recomendación clínica sobre REEV/auto-ACMG."
+        "Capa de recomendación clínica sobre REEV/auto-ACMG. "
+        "Vías KEGG integradas para cada categoría."
     ),
     version="1.0.0",
     lifespan=lifespan,
@@ -323,12 +330,22 @@ app.add_middleware(
 
 def _row_to_gene(row: sqlite3.Row, settings: Settings) -> GeneInfo:
     uniprot = row["uniprot"] or ""
+    omim_code = row["omim_code"] or ""
+    genereviews_id = row["genereviews_id"] or ""
     links = {}
     if uniprot:
         links["uniprot"] = f"https://www.uniprot.org/uniprot/{uniprot}"
         links["alphafold"] = f"https://alphafold.ebi.ac.uk/entry/{uniprot}"
         links["protein_viewer"] = f"{settings.protein_viewer_external_url}/?gene={row['symbol']}"
-    links["omim"] = f"https://www.omim.org/search?search={row['symbol']}"
+    
+    # OMIM: solo si existe omim_code
+    if omim_code:
+        links["omim"] = f"https://www.omim.org/entry/{omim_code}"
+    
+    # GeneReviews: solo si existe genereviews_id
+    if genereviews_id:
+        links["genereviews"] = f"https://www.ncbi.nlm.nih.gov/books/{genereviews_id}"
+    
     links["clinvar"] = f"https://www.ncbi.nlm.nih.gov/clinvar/?term={row['symbol']}[gene]"
     links["gnomad"] = f"https://gnomad.broadinstitute.org/gene/{row['symbol']}"
     links["reev"] = f"{settings.reev_external_url}/gene/{row['symbol']}"
@@ -338,6 +355,8 @@ def _row_to_gene(row: sqlite3.Row, settings: Settings) -> GeneInfo:
         name=row["name"],
         hgnc_id=row["hgnc_id"],
         uniprot=uniprot or None,
+        omim_code=omim_code or None,
+        genereviews_id=genereviews_id or None,
         mechanism_groups=json.loads(row["mechanism_groups"]),
         clinical_labels=json.loads(row["clinical_labels"]),
         mechanism=json.loads(row["mechanism"]),
@@ -590,6 +609,7 @@ def get_stats():
 @app.get("/api/panel/version", tags=["Panel"])
 def get_panel_version():
     return {"version": "2026.06", "source": "ClinGen/GenCC/OMIM/PMID curation — Neuropediatrics Lab"}
+
 
 
 # ─────────────────────────────────────────────────────────────

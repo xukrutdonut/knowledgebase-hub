@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="100%">
+  <defs>
+    <style>
+      .kegg-box { fill: #f3f4f6; stroke: #3b82f6; stroke-width: 2; }
+      .kegg-title { font-size: 28px; font-weight: bold; fill: #1f2937; font-family: Arial, sans-serif; }
+      .kegg-id { font-size: 24px; fill: #3b82f6; font-family: monospace; font-weight: bold; }
+      .kegg-text { font-size: 16px; fill: #666; font-family: Arial, sans-serif; }
+      .kegg-link { text-decoration: underline; fill: #0284c7; cursor: pointer; }
+      text { user-select: none; }
+    </style>
+  </defs>
+  
+  <!-- Fondo -->
+  <rect width="1200" height="700" fill="white"/>
+  
+  <!-- Caja principal -->
+  <rect class="kegg-box" x="100" y="150" width="1000" height="400" rx="12"/>
+  
+  <!-- Contenido -->
+  <text class="kegg-title" x="600" y="240" text-anchor="middle">Vía de Señalización KEGG</text>
+  <text class="kegg-id" x="600" y="310" text-anchor="middle">hsa04142</text>
+  
+  <!-- Link -->
+  <a href="https://www.kegg.jp/pathway/hsa04142" target="_blank">
+    <text class="kegg-link" x="600" y="380" text-anchor="middle" font-size="18">Abrir diagrama completo en KEGG.jp →</text>
+  </a>
+  
+  <!-- Info -->
+  <text class="kegg-text" x="600" y="480" text-anchor="middle">Haz clic para ver la vía metabolica completa e interactiva</text>
+  <text class="kegg-text" x="600" y="520" text-anchor="middle" font-size="12">Datos de KEGG Pathway Database</text>
+  
+  <!-- Decoración -->
+  <circle cx="200" cy="100" r="30" fill="#3b82f6" opacity="0.1"/>
+  <circle cx="1050" cy="600" r="40" fill="#3b82f6" opacity="0.1"/>
+</svg>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NeuropedGx Hub — Panel Genético Neuropediátrico</title>
+  <title>knowledgeDB.neuropediaLAB — Panel Genético Neuropediátrico</title>
   <style>
     :root {
       --bg: #0f1117;
@@ -438,6 +438,18 @@ const KEGG_MAP = {
   autoinflammatory_cns           : 'hsa04060',  // Cytokine-receptor
   cdg                            : 'hsa00510',  // N-Glycan biosynthesis
   channelopathy                  : 'hsa04020',  // Calcium signaling
+  channelopathy_sodium           : 'hsa04020',  // Canalopátias de Sodio
+  channelopathy_potassium        : 'hsa04020',  // Canalopátias de Potasio
+  channelopathy_calcium          : 'hsa04020',  // Canalopátias de Calcio
+  channelopathy_chloride         : 'hsa04020',  // Canalopátias de Cloro
+  channelopathy_glutamate        : 'hsa04020',  // Canales de Glutamato
+  channelopathy_gaba             : 'hsa04080',  // Receptores GABA
+  channelopathy_glycine          : 'hsa04080',  // Receptores Glicina
+  transportopathy_nt_reuptake    : 'hsa04080',  // Recaptura de NT
+  transportopathy_vesicular      : 'hsa04130',  // SNARE interactions
+  transportopathy_amino_acid     : 'hsa00250',  // Alanine, aspartate metabolism
+  transportopathy_ion_pumps      : 'hsa04020',  // Calcium signaling
+  transportopathy_solute         : 'hsa04020',  // Calcium signaling
   chromatin_remodeling           : 'hsa03040',  // Spliceosome
   ciliopathy                     : 'hsa04961',  // Endocrine reabsorption
   cofactor_nt                    : 'hsa00340',  // Histidine metabolism
@@ -486,6 +498,59 @@ const KEGG_MAP = {
   xlid                           : 'hsa04010',  // MAPK signaling
 };
 
+// ── Subcategorías de Canalopátias y Transportopatías ────
+const CHANNELOPATHY_SUBCATS = {
+  // CANALES IÓNICOS
+  'channelopathy_sodium': {
+    label: 'Sodio (SCN)',
+    genes: ['SCN1A', 'SCN1B', 'SCN2A', 'SCN2B', 'SCN3A', 'SCN3B', 'SCN4A', 'SCN4B', 'SCN5A', 'SCN8A', 'SCN9A', 'SCN10A', 'SCN11A']
+  },
+  'channelopathy_potassium': {
+    label: 'Potasio (KCN)',
+    genes: ['KCNA1', 'KCNA2', 'KCNA3', 'KCNA4', 'KCNA5', 'KCNA6', 'KCNA7', 'KCNB1', 'KCNB2', 'KCNC1', 'KCNC2', 'KCNC3', 'KCNC4', 'KCND1', 'KCND2', 'KCND3', 'KCNF1', 'KCNG1', 'KCNG2', 'KCNG3', 'KCNG4', 'KCNH1', 'KCNH2', 'KCNH3', 'KCNH4', 'KCNH5', 'KCNH6', 'KCNH7', 'KCNH8', 'KCNIP1', 'KCNIP2', 'KCNIP3', 'KCNIP4', 'KCNJ1', 'KCNJ2', 'KCNJ3', 'KCNJ4', 'KCNJ5', 'KCNJ6', 'KCNJ8', 'KCNJ9', 'KCNJ10', 'KCNJ11', 'KCNJ12', 'KCNJ13', 'KCNJ14', 'KCNJ15', 'KCNJ16', 'KCNQ1', 'KCNQ2', 'KCNQ3', 'KCNQ4', 'KCNQ5', 'KCNS1', 'KCNS2', 'KCNS3', 'KCNT1', 'KCNT2']
+  },
+  'channelopathy_calcium': {
+    label: 'Calcio (CACN)',
+    genes: ['CACNA1A', 'CACNA1B', 'CACNA1C', 'CACNA1D', 'CACNA1E', 'CACNA1F', 'CACNA1G', 'CACNA1H', 'CACNA1I', 'CACNA1S', 'CACNB1', 'CACNB2', 'CACNB3', 'CACNB4', 'CACNG1', 'CACNG2', 'CACNG3', 'CACNG4', 'CACNG5', 'CACNG6', 'CACNG7', 'CACNG8']
+  },
+  'channelopathy_chloride': {
+    label: 'Cloro (CLCn)',
+    genes: ['CLCN1', 'CLCN2', 'CLCN3', 'CLCN4', 'CLCN5', 'CLCN6', 'CLCN7', 'CLCNKA', 'CLCNKB']
+  },
+  'channelopathy_glutamate': {
+    label: 'Glutamato (GRI/GRM)',
+    genes: ['GRIA1', 'GRIA2', 'GRIA3', 'GRIA4', 'GRID1', 'GRID2', 'GRM1', 'GRM2', 'GRM3', 'GRM4', 'GRM5', 'GRM6', 'GRM7', 'GRM8', 'GRIN1', 'GRIN2A', 'GRIN2B', 'GRIN2C', 'GRIN2D', 'GRIN3A', 'GRIN3B', 'GRIK1', 'GRIK2', 'GRIK3', 'GRIK4', 'GRIK5']
+  },
+  'channelopathy_gaba': {
+    label: 'GABA (GABR)',
+    genes: ['GABRA1', 'GABRA2', 'GABRA3', 'GABRA4', 'GABRA5', 'GABRA6', 'GABRB1', 'GABRB2', 'GABRB3', 'GABRG1', 'GABRG2', 'GABRG3', 'GABRP', 'GABRQ', 'GABBR1', 'GABBR2']
+  },
+  'channelopathy_glycine': {
+    label: 'Glicina (GLR)',
+    genes: ['GLRA1', 'GLRA2', 'GLRA3', 'GLRA4', 'GLRB']
+  },
+  // TRANSPORTADORES
+  'transportopathy_nt_reuptake': {
+    label: 'Recaptura NT (SLC6)',
+    genes: ['SLC6A1', 'SLC6A3', 'SLC6A4', 'SLC6A5', 'SLC6A8', 'SLC6A9', 'SLC6A11', 'SLC6A13', 'SLC6A15', 'SLC6A17']
+  },
+  'transportopathy_vesicular': {
+    label: 'Vesiculares (SLC17/18)',
+    genes: ['SLC17A5', 'SLC17A6', 'SLC17A7', 'SLC17A8', 'SLC18A1', 'SLC18A2', 'SLC18A3']
+  },
+  'transportopathy_amino_acid': {
+    label: 'Aminoácidos (SLC1/7)',
+    genes: ['SLC1A1', 'SLC1A3', 'SLC1A4', 'SLC1A5', 'SLC1A6', 'SLC1A7', 'SLC7A1', 'SLC7A2', 'SLC7A5', 'SLC7A8', 'SLC7A9', 'SLC7A10', 'SLC7A11']
+  },
+  'transportopathy_ion_pumps': {
+    label: 'Bombas de iones (ATP)',
+    genes: ['ATP1A1', 'ATP1A2', 'ATP1A3', 'ATP1B1', 'ATP1B2', 'ATP1B3', 'ATP2A1', 'ATP2A2', 'ATP2A3', 'ATP2B1', 'ATP2B2', 'ATP2B3', 'ATP2B4', 'ATP2C1', 'ATP2C2', 'ATP7A', 'ATP7B', 'ATP8A2', 'ATP13A2', 'ATP13A4', 'ATP13A5']
+  },
+  'transportopathy_solute': {
+    label: 'Transportadores solubles (SLC)',
+    genes: ['SLC2A1', 'SLC2A3', 'SLC2A8', 'SLC2A12', 'SLC5A7', 'SLC9A3', 'SLC16A2', 'SLC19A1', 'SLC19A3', 'SLC22A5', 'SLC25A1', 'SLC25A13', 'SLC25A15', 'SLC25A22', 'SLC25A38', 'SLC25A46', 'SLC30A10', 'SLC32A1', 'SLC39A4', 'SLC39A8']
+  }
+};
 
 // ── Load single gene card ─────────────────────────────────
 async function loadGene(symbol) {
@@ -532,7 +597,7 @@ function makeGenesClickable(container) {
   });
 }
 
-// ── Show KEGG pathway for a group ───────────────────────────
+// ── Show pathway SVG for a group ─────────────────────────
 async function showPathwaySVG(groupId) {
   const pathwayId = KEGG_MAP[groupId];
   const wrap = document.getElementById('pathwayWrap');
@@ -541,27 +606,16 @@ async function showPathwaySVG(groupId) {
 
   try {
     wrap.style.display = '';
-    // Use KEGG REST API to get pathway image
     const keggUrl = `https://www.kegg.jp/pathway/${pathwayId}`;
-    const keggImageUrl = `https://www.kegg.jp/pathway/map/${pathwayId}.png`;
     
-    wrap.innerHTML = `
-      <div style="text-align: center; padding: 20px;">
-        <p style="margin-bottom: 15px; color: #666;">
-          <strong>Vía KEGG:</strong> ${pathwayId}
-        </p>
-        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9;">
-          <img src="${keggImageUrl}" alt="KEGG Pathway ${pathwayId}" 
-               style="max-width: 100%; height: auto; display: block; margin: 0 auto;"
-               onerror="this.parentElement.innerHTML = '<p style=\"color: #f87171; padding: 20px;\">No se pudo cargar el diagrama KEGG. <a href=\\"${keggUrl}\\" target=\\"_blank\\" style=\\"color: #3b7fbd;\\">[Ver en KEGG.jp]</a></p>'">
-        </div>
-        <p style="margin-top: 15px; font-size: 0.85rem; color: #999;">
-          Datos de <a href="${keggUrl}" target="_blank" style="color: #3b7fbd;">KEGG Pathway Database</a>
-        </p>
-      </div>
-      <p class="svg-caption">Acceder a KEGG para más detalles e interactividad</p>
-    `;
-  } catch {
+    let html = '<div style="border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background: white; height: 700px;">';
+    html += '<iframe src="' + keggUrl + '" style="width: 100%; height: 100%; border: none; margin: 0; padding: 0;" title="KEGG Pathway ' + pathwayId + '"></iframe>';
+    html += '</div>';
+    html += '<p class="svg-caption" style="text-align: center; margin-top: 10px; color: #666;">Vía KEGG: ' + pathwayId + ' - Diagrama interactivo (puedes hacer zoom, click en genes, descargar, etc.)</p>';
+    
+    wrap.innerHTML = html;
+  } catch (e) {
+    console.error('Error loading KEGG pathway:', e);
     wrap.style.display = 'none';
   }
 }
@@ -1020,6 +1074,7 @@ function renderGeneCard(g) {
       ${g.links.protein_viewer ? `<a href="${g.links.protein_viewer}" target="_blank" class="ext-link">🧬 Estructura 3D</a>` : ''}
       ${g.links.gnomad ? `<a href="${g.links.gnomad}" target="_blank" class="ext-link">gnomAD</a>` : ''}
       ${g.links.clinvar ? `<a href="${g.links.clinvar}" target="_blank" class="ext-link">ClinVar</a>` : ''}
+      ${g.links.genereviews ? `<a href="${g.links.genereviews}" target="_blank" class="ext-link">GeneReviews</a>` : ''}
       ${g.links.uniprot ? `<a href="${g.links.uniprot}" target="_blank" class="ext-link">UniProt</a>` : ''}
       ${g.links.alphafold ? `<a href="${g.links.alphafold}" target="_blank" class="ext-link">AlphaFold</a>` : ''}
       ${g.links.omim ? `<a href="${g.links.omim}" target="_blank" class="ext-link">OMIM</a>` : ''}
