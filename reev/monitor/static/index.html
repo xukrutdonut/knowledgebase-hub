@@ -665,7 +665,7 @@ async function triggerUpdate() {
     showAlert('info', 'La actualización ya está en curso.')
     return
   }
-  if (!confirm('¿Lanzar download-smart.sh en el NAS? El proceso tardará varias horas.')) return
+  if (!confirm('¿Lanzar download-smart.sh localmente? El proceso tardará varias horas.')) return
   try {
     const r = await apiFetch('/api/update/start', { method: 'POST' })
     showAlert('success', `▶ Actualización iniciada (PID: ${r.pid})`)

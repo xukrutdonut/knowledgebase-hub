@@ -379,11 +379,20 @@ async def get_group_size(group_id: str):
     }
 
 
+HOST_PROC_MNT_NS = "/host-proc/1/ns/mnt"
+HOST_SCRIPT = os.environ.get("HOST_SCRIPT", "/media/arkantu/Storage1TB/reev/download-smart.sh")
+
+
+def _nsenter_cmd(cmd: list) -> list:
+    """Wrap a command with nsenter to run in the host mount namespace."""
+    return ["nsenter", f"--mount={HOST_PROC_MNT_NS}", "--"] + cmd
+
+
 def _nas_script_running() -> Optional[int]:
-    """Return local PID of download-smart.sh if running, else None."""
+    """Return host PID of download-smart.sh if running, else None."""
     try:
         r = subprocess.run(
-            ["pgrep", "-f", DL_SCRIPT],
+            _nsenter_cmd(["pgrep", "-f", HOST_SCRIPT]),
             capture_output=True, text=True, timeout=5,
         )
         pid_str = r.stdout.strip().splitlines()[0] if r.stdout.strip() else ""
@@ -455,22 +464,29 @@ def update_progress():
 
 @app.post("/api/update/start")
 def start_update():
-    """Launch download-smart.sh locally in background (nohup)."""
+    """Launch download-smart.sh in the host's mount namespace via nsenter."""
     if _nas_script_running() is not None:
         raise HTTPException(409, "Update already running")
 
-    if not Path(DL_SCRIPT).exists():
-        raise HTTPException(404, f"Script not found: {DL_SCRIPT}")
+    # Verify the script is accessible in the host namespace
+    check = subprocess.run(
+        _nsenter_cmd(["test", "-f", HOST_SCRIPT]),
+        capture_output=True, timeout=5,
+    )
+    if check.returncode != 0:
+        raise HTTPException(404, f"Script not found in host namespace: {HOST_SCRIPT}")
 
     try:
         log_file = open(str(LOG_FILE), "a")
+        # nsenter enters the host's mount namespace so host tools
+        # (wget, rsync, s5cmd, ...) are available — they are absent inside the container.
         proc = subprocess.Popen(
-            ["bash", DL_SCRIPT],
+            _nsenter_cmd(["bash", HOST_SCRIPT]),
             stdout=log_file,
             stderr=log_file,
-            start_new_session=True,  # detach from parent process group
+            start_new_session=True,
         )
-        return {"started": True, "pid": proc.pid, "script": DL_SCRIPT}
+        return {"started": True, "pid": proc.pid, "script": HOST_SCRIPT}
     except Exception as exc:
         raise HTTPException(500, str(exc))
 

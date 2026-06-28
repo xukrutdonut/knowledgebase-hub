@@ -269,24 +269,31 @@ services:
     image: reev-monitor:latest
     ports:
       - "8300:8300"
+    privileged: true   # required for nsenter to run script in host namespace
     environment:
       DATA_DIR: /nas/data
       LOG_FILE: /nas/download-smart.log
       DL_SCRIPT: /nas/download-smart.sh
+      HOST_SCRIPT: /media/arkantu/Storage1TB/reev/download-smart.sh
     volumes:
       # DB data — read-only
       - type: bind
         source: /media/arkantu/Storage1TB/reev/volumes/reev-static/data
         target: /nas/data
         read_only: true
-      # Download log — rw para que el monitor pueda escribir entradas propias
+      # Download log — rw
       - type: bind
         source: /media/arkantu/Storage1TB/reev/download-smart.log
         target: /nas/download-smart.log
-      # Download script — ejecutado localmente desde el contenedor
+      # Download script — path reference for pgrep
       - type: bind
         source: /media/arkantu/Storage1TB/reev/download-smart.sh
         target: /nas/download-smart.sh
+        read_only: true
+      # Host /proc needed by nsenter to target PID 1
+      - type: bind
+        source: /proc
+        target: /host-proc
         read_only: true
 
   # -- pgAdmin ---------------------------------------------------------------
