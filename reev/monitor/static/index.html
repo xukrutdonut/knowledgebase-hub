@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>REEV · Monitor de Bases de Datos</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -123,6 +124,14 @@
       <span id="disk-total" class="text-gray-300">—</span>
       <span id="disk-pct" class="text-gray-500"></span>
     </div>
+    <!-- Búsqueda de Actualizaciones -->
+    <div id="check-badge" class="hidden sm:flex items-center gap-1.5 bg-gray-800 rounded-lg px-3 py-1.5 text-xs">
+      <span class="text-gray-400">Comprobado:</span>
+      <span id="check-last-time" class="text-gray-350 font-medium">—</span>
+      <button onclick="runCheckUpdates()" id="btn-check-updates" class="text-blue-400 hover:text-blue-300 ml-1 transition" title="Buscar actualizaciones ahora">
+        🔍 Buscar
+      </button>
+    </div>
     <!-- Última actualización -->
     <span id="last-refresh" class="text-xs text-gray-600"></span>
     <!-- Botón refrescar -->
@@ -142,36 +151,127 @@
 <!-- ALERT STRIP -->
 <div id="alert" class="hidden mx-6 mt-4 p-3 rounded-lg text-sm font-medium"></div>
 
-<!-- UPDATE RUNNING BANNER -->
-<div id="update-bar" class="hidden mx-6 mt-3 rounded-xl bg-blue-950/60 border border-blue-700/50 px-4 py-3">
-  <div class="flex items-center gap-3 mb-2">
-    <span class="text-blue-400 text-lg animate-pulse">⬇</span>
-    <div class="flex-1 min-w-0">
-      <div class="flex items-center justify-between gap-2">
-        <span class="text-blue-300 text-sm font-semibold">Descargando bases de datos…</span>
-        <span id="update-pct-label" class="text-blue-300 text-xs font-mono font-bold shrink-0">—</span>
+<!-- UPDATE CHECK BANNER -->
+<div id="update-check-banner" class="hidden mx-6 mt-4 p-4 rounded-xl bg-yellow-950/60 border border-yellow-700/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 fade-in">
+  <div class="flex items-start gap-3">
+    <span class="text-xl">🔔</span>
+    <div>
+      <h4 class="text-sm font-bold text-yellow-300">Actualizaciones disponibles</h4>
+      <p class="text-xs text-yellow-400/75 mt-0.5" id="update-check-pending-list">Hay bases de datos pendientes de descargar o actualizar.</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2 shrink-0">
+    <button onclick="triggerUpdate()" class="bg-yellow-600 hover:bg-yellow-500 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition">
+      Actualizar ahora
+    </button>
+  </div>
+</div>
+
+<!-- UPDATE RUNNING PANEL -->
+<div id="update-bar" class="hidden mx-6 mt-3 rounded-xl bg-gray-900 border border-blue-500/30 p-6 shadow-xl fade-in">
+  <div class="flex items-center gap-2.5 mb-6 border-b border-gray-800 pb-3">
+    <span class="w-3.5 h-3.5 rounded-full bg-blue-500 animate-ping"></span>
+    <h2 class="text-base font-bold text-blue-300">Panel de Control de Descarga</h2>
+  </div>
+  
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- PROGRESS AND INDIVIDUAL BARS -->
+    <div class="lg:col-span-7 space-y-6">
+      <!-- Overall Progress -->
+      <div class="bg-gray-950/40 border border-gray-800 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Progreso Total</span>
+          <span id="update-pct-label" class="text-lg font-bold text-blue-400 font-mono">—</span>
+        </div>
+        <div class="h-3.5 bg-gray-800 rounded-full overflow-hidden p-0.5 border border-gray-700/50">
+          <div id="update-bar-overall" class="h-full bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full transition-all duration-700" style="width:0%"></div>
+        </div>
+        <div class="flex justify-between text-xs text-gray-500 font-mono">
+          <span id="update-done-label">—</span>
+          <span id="update-speed-total">Velocidad global: —</span>
+        </div>
       </div>
-      <div id="update-bar-current" class="text-xs text-blue-400/60 truncate mt-0.5">iniciando…</div>
+
+      <!-- Current File / Active Download Details -->
+      <div class="bg-gray-950/40 border border-gray-800 rounded-xl p-4 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <span class="text-[10px] text-gray-500 font-semibold uppercase tracking-wider block">Descargando actualmente</span>
+            <span id="update-bar-current" class="text-sm font-medium text-gray-200 truncate block">Iniciando...</span>
+          </div>
+          <span id="update-speed-label" class="text-xs font-bold text-cyan-400 font-mono shrink-0 bg-cyan-950/50 border border-cyan-800/30 px-2 py-0.5 rounded">0.0 MB/s</span>
+        </div>
+        <!-- Rsync progress -->
+        <div id="update-rsync-row" class="hidden space-y-2">
+          <div class="h-2 bg-gray-850 rounded-full overflow-hidden border border-gray-800">
+            <div id="update-bar-rsync" class="h-full bg-cyan-500 rounded-full transition-all duration-500" style="width:0%"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-gray-500 font-mono">
+            <span id="update-rsync-pct">0%</span>
+            <span id="update-rsync-eta"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Individual Database Progress Bars -->
+      <div class="bg-gray-950/40 border border-gray-800 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Descargas activas</span>
+          <span id="active-count-badge" class="text-[10px] font-mono bg-blue-950/60 border border-blue-800/40 text-blue-300 px-2 py-0.5 rounded">0 en progreso</span>
+        </div>
+        <div id="active-downloads-container" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+          <p class="text-xs text-gray-550 italic">Cargando descargas activas...</p>
+        </div>
+        <!-- Queued section -->
+        <div id="queued-section" class="hidden mt-3 pt-3 border-t border-gray-800/50">
+          <span class="text-[10px] text-gray-500 font-semibold uppercase tracking-wider block mb-2">En cola</span>
+          <div id="queued-downloads-container" class="space-y-2 max-h-40 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+
+      <!-- Disk projection panel -->
+      <div id="disk-panel" class="bg-gray-950/40 border border-gray-800 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider">Previsión de Disco</span>
+          <span id="disk-alert-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded border"></span>
+        </div>
+        <!-- Disk bar -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between text-[10px] text-gray-500 font-mono">
+            <span>Usado: <span id="disk-used-human" class="text-gray-300">—</span></span>
+            <span>Libre: <span id="disk-free-human" class="text-gray-300">—</span></span>
+            <span>Total: <span id="disk-total-human" class="text-gray-300">—</span></span>
+          </div>
+          <div class="h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-700/30 relative">
+            <div id="disk-used-bar" class="h-full rounded-full transition-all duration-700 bg-indigo-600" style="width:0%"></div>
+            <div id="disk-pending-bar" class="h-full rounded-full transition-all duration-700 bg-amber-500/70 absolute top-0" style="left:0%;width:0%"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-gray-500 font-mono">
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-sm bg-indigo-600"></span>Actual</span>
+            <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-sm bg-amber-500/70"></span>Pendiente S3: <span id="disk-pending-human" class="text-amber-300 ml-1">—</span></span>
+          </div>
+        </div>
+        <!-- Alert message -->
+        <div id="disk-overflow-msg" class="hidden rounded-lg border p-2.5 text-xs"></div>
+      </div>
     </div>
-  </div>
-  <!-- Overall progress (done/total .done files) -->
-  <div class="space-y-1">
-    <div class="flex justify-between text-xs text-blue-400/50">
-      <span>Total bases de datos</span>
-      <span id="update-done-label">—</span>
-    </div>
-    <div class="h-2 bg-blue-900/60 rounded-full overflow-hidden">
-      <div id="update-bar-overall" class="h-full bg-blue-500 rounded-full transition-all duration-700" style="width:0%"></div>
-    </div>
-  </div>
-  <!-- Current file rsync progress -->
-  <div id="update-rsync-row" class="hidden mt-2 space-y-1">
-    <div class="flex justify-between text-xs text-blue-400/50">
-      <span>Archivo actual (rsync)</span>
-      <span id="update-rsync-eta"></span>
-    </div>
-    <div class="h-1.5 bg-blue-900/60 rounded-full overflow-hidden">
-      <div id="update-bar-rsync" class="h-full bg-cyan-400 rounded-full transition-all duration-500" style="width:0%"></div>
+
+    <!-- PERFORMANCE CHART -->
+    <div class="lg:col-span-5 flex flex-col">
+      <div class="bg-gray-950/40 border border-gray-800 rounded-xl p-4 flex-1 flex flex-col space-y-4">
+        <div>
+          <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider block mb-1">Rendimiento Real (Últimos 5 min)</span>
+          <div class="relative min-h-[140px] max-h-[160px]">
+            <canvas id="downloadChartRealtime"></canvas>
+          </div>
+        </div>
+        <div>
+          <span class="text-xs text-gray-400 font-semibold uppercase tracking-wider block mb-1">Histórico Completo</span>
+          <div class="relative min-h-[140px] max-h-[160px]">
+            <canvas id="downloadChartHistory"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -241,6 +341,10 @@ let groups = []
 let sizeCache = {}
 let liveLogSource = null
 let updatePollTimer = null
+let downloadChartRealtime = null
+let downloadChartHistory = null
+let chartHistory = { times: [], speeds: [], progress: [] }
+let chartRealtime = { times: [], speeds: [], progress: [] }
 
 // ── Fetch helpers ──────────────────────────────────────────────────────────────
 // Base path adapts automatically whether served at / or under a sub-path like /db-monitor/
@@ -248,6 +352,14 @@ const API_BASE = (() => {
   const p = window.location.pathname.replace(/\/[^/]*$/, '')  // strip trailing segment if not dir
   return p.endsWith('/') ? p.slice(0, -1) : p
 })()
+
+function formatBytes(bytes) {
+  if (bytes === undefined || bytes === null || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
 
 async function apiFetch(path, opts = {}) {
   const r = await fetch(API_BASE + path, opts)
@@ -408,7 +520,10 @@ function showTooltip(rowId, x, y) {
     document.getElementById('tt-dl-pct').textContent    = `${pct}%`
     document.getElementById('tt-dl-bar').style.width    = `${pct}%`
     document.getElementById('tt-dl-bar').className      = `h-full rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`
-    document.getElementById('tt-dl-detail').textContent = `${p.sst_done} de ${p.sst_total} archivos completados · CURRENT: ${p.has_current ? '✓' : '…'}`
+    const sizeDetails = (p.bytes_total > 0)
+      ? ` (${formatBytes(p.bytes_done)} de ${formatBytes(p.bytes_total)})`
+      : '';
+    document.getElementById('tt-dl-detail').textContent = `${p.sst_done} de ${p.sst_total} archivos completados${sizeDetails} · CURRENT: ${p.has_current ? '✓' : '…'}`
     dlRow.classList.remove('hidden')
   } else {
     dlRow.classList.add('hidden')
@@ -520,12 +635,15 @@ function renderGroups() {
         const p = e.dl_progress
         const pct = p.pct ?? 0
         const barColor = pct === 100 ? 'bg-green-500' : 'bg-blue-500'
+        const label = p.bytes_total > 0
+          ? `${formatBytes(p.bytes_done)}/${formatBytes(p.bytes_total)} · ${pct}%`
+          : `${p.sst_done}/${p.sst_total} · ${pct}%`;
         dlProgress = `
           <div class="mt-1 flex items-center gap-2">
             <div class="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
               <div class="${barColor} h-full rounded-full transition-all" style="width:${pct}%"></div>
             </div>
-            <span class="text-gray-500 text-xs whitespace-nowrap">${p.sst_done}/${p.sst_total} · ${pct}%</span>
+            <span class="text-gray-500 text-xs whitespace-nowrap">${label}</span>
           </div>`
       }
 
@@ -645,6 +763,45 @@ async function loadDisk() {
       document.getElementById('disk-badge').classList.remove('hidden')
     }
   } catch(e) { /* silently ignore */ }
+  // Also update the download projection panel with the richer /api/disk data
+  loadDiskPanel();
+}
+
+async function loadUpdateCheck() {
+  try {
+    const p = await apiFetch('/api/update/check')
+    if (p.last_checked) {
+      document.getElementById('check-last-time').textContent = p.last_checked
+      document.getElementById('check-badge').classList.remove('hidden')
+      
+      const banner = document.getElementById('update-check-banner')
+      if (p.updates_available) {
+        document.getElementById('update-check-pending-list').innerHTML = 
+          `Bases de datos con actualizaciones pendientes en Ceph S3: <strong class="text-yellow-200">${p.pending_list.join(', ')}</strong>.`
+        banner.classList.remove('hidden')
+      } else {
+        banner.classList.add('hidden')
+      }
+    }
+  } catch(e) { /* ignore */ }
+}
+
+async function runCheckUpdates() {
+  const btn = document.getElementById('btn-check-updates')
+  const lastText = btn.textContent
+  btn.textContent = '⏳ ...'
+  btn.disabled = true
+  try {
+    showAlert('info', 'Buscando actualizaciones en Ceph S3...')
+    await apiFetch('/api/update/check/run', { method: 'POST' })
+    await loadUpdateCheck()
+    showAlert('success', 'Búsqueda de actualizaciones completada.')
+  } catch(e) {
+    showAlert('error', `Error al buscar actualizaciones: ${e.message}`)
+  } finally {
+    btn.textContent = lastText
+    btn.disabled = false
+  }
 }
 
 // ── Load size for a group ──────────────────────────────────────────────────────
@@ -669,6 +826,19 @@ async function triggerUpdate() {
   try {
     const r = await apiFetch('/api/update/start', { method: 'POST' })
     showAlert('success', `▶ Actualización iniciada (PID: ${r.pid})`)
+    
+    // Resetear gráfico para nueva sesión
+    chartHistory = { times: [], speeds: [], progress: [] }
+    chartRealtime = { times: [], speeds: [], progress: [] }
+    if (downloadChartRealtime) {
+      downloadChartRealtime.destroy();
+      downloadChartRealtime = null;
+    }
+    if (downloadChartHistory) {
+      downloadChartHistory.destroy();
+      downloadChartHistory = null;
+    }
+    
     setUpdateRunning(true)
     startUpdatePoll()
     // Enable live log automatically
@@ -717,10 +887,132 @@ function startUpdatePoll() {
   }, 8000)
 }
 
+function parseSpeedToMBs(speedStr) {
+  if (!speedStr) return 0;
+  const match = speedStr.match(/([\d.]+)\s*([a-zA-Z/]+)/);
+  if (!match) return 0;
+  const val = parseFloat(match[1]);
+  const unit = match[2].toLowerCase();
+  if (unit.includes('gb')) return val * 1024;
+  if (unit.includes('kb')) return val / 1024;
+  if (unit.includes('b/s') && !unit.includes('kb') && !unit.includes('mb')) return val / (1024 * 1024);
+  return val; // assumed MB/s
+}
+
+function createChartConfig(times, speeds, progress) {
+  return {
+    type: 'line',
+    data: {
+      labels: times,
+      datasets: [
+        {
+          label: 'Velocidad (MB/s)',
+          data: speeds,
+          borderColor: '#22d3ee',
+          backgroundColor: 'rgba(34, 211, 238, 0.1)',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          yAxisID: 'ySpeed',
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'Progreso (%)',
+          data: progress,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.05)',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          yAxisID: 'yProgress',
+          tension: 0.3,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 8 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }
+        },
+        ySpeed: {
+          type: 'linear',
+          position: 'left',
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#22d3ee', font: { family: 'JetBrains Mono', size: 8 } },
+          title: { display: false }
+        },
+        yProgress: {
+          type: 'linear',
+          position: 'right',
+          grid: { drawOnChartArea: false },
+          min: 0,
+          max: 100,
+          ticks: { color: '#3b82f6', font: { family: 'JetBrains Mono', size: 8 } },
+          title: { display: false }
+        }
+      },
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  };
+}
+
+function updateDownloadChart(speedMb, progressPct) {
+  const ctxReal = document.getElementById('downloadChartRealtime');
+  const ctxHist = document.getElementById('downloadChartHistory');
+  if (!ctxReal || !ctxHist) return;
+
+  const nowStr = new Date().toLocaleTimeString();
+
+  // 1. Update History
+  chartHistory.times.push(nowStr);
+  chartHistory.speeds.push(speedMb);
+  chartHistory.progress.push(progressPct);
+
+  // 2. Update Realtime (max 40 points, ~5 minutes)
+  if (chartRealtime.times.length >= 40) {
+    chartRealtime.times.shift();
+    chartRealtime.speeds.shift();
+    chartRealtime.progress.shift();
+  }
+  chartRealtime.times.push(nowStr);
+  chartRealtime.speeds.push(speedMb);
+  chartRealtime.progress.push(progressPct);
+
+  // 3. Render / Update Realtime chart
+  if (!downloadChartRealtime) {
+    downloadChartRealtime = new Chart(ctxReal, createChartConfig(chartRealtime.times, chartRealtime.speeds, chartRealtime.progress));
+  } else {
+    downloadChartRealtime.data.labels = chartRealtime.times;
+    downloadChartRealtime.data.datasets[0].data = chartRealtime.speeds;
+    downloadChartRealtime.data.datasets[1].data = chartRealtime.progress;
+    downloadChartRealtime.update();
+  }
+
+  // 4. Render / Update History chart
+  if (!downloadChartHistory) {
+    downloadChartHistory = new Chart(ctxHist, createChartConfig(chartHistory.times, chartHistory.speeds, chartHistory.progress));
+  } else {
+    downloadChartHistory.data.labels = chartHistory.times;
+    downloadChartHistory.data.datasets[0].data = chartHistory.speeds;
+    downloadChartHistory.data.datasets[1].data = chartHistory.progress;
+    downloadChartHistory.update();
+  }
+}
+
 async function fetchUpdateProgress() {
   try {
     const p = await apiFetch('/api/update/progress')
-    // Overall bar
+    
+    // Overall progress bar
     const overallBar = document.getElementById('update-bar-overall')
     const pctLabel   = document.getElementById('update-pct-label')
     const doneLabel  = document.getElementById('update-done-label')
@@ -729,16 +1021,116 @@ async function fetchUpdateProgress() {
     if (pctLabel)   pctLabel.textContent   = p.total > 0 ? `${p.pct}%` : '…'
     if (doneLabel)  doneLabel.textContent  = p.total > 0 ? `${p.done} / ${p.total} completas` : '—'
     if (currentEl && p.current_file) currentEl.textContent = p.current_file
-    // Rsync bar (current file)
+
+    // Speed label & conversion
+    const speedLabel = document.getElementById('update-speed-label')
+    const speedTotal = document.getElementById('update-speed-total')
+    let currentSpeedMB = 0
+    if (p.rsync_speed) {
+      if (speedLabel) {
+        speedLabel.textContent = p.rsync_speed
+        speedLabel.classList.remove('hidden')
+      }
+      if (speedTotal) speedTotal.textContent = `Velocidad actual: ${p.rsync_speed}`
+      currentSpeedMB = parseSpeedToMBs(p.rsync_speed)
+    } else {
+      if (speedLabel) speedLabel.classList.add('hidden')
+      if (speedTotal) speedTotal.textContent = 'Velocidad global: —'
+    }
+
+    // Update real-time chart
+    updateDownloadChart(currentSpeedMB, p.pct)
+
+    // Rsync bar (current file progress)
     const rsyncRow = document.getElementById('update-rsync-row')
     const rsyncBar = document.getElementById('update-bar-rsync')
     const rsyncEta = document.getElementById('update-rsync-eta')
+    const rsyncPct = document.getElementById('update-rsync-pct')
     if (p.rsync_pct !== null && p.rsync_pct !== undefined) {
       if (rsyncRow) rsyncRow.classList.remove('hidden')
       if (rsyncBar) rsyncBar.style.width = `${p.rsync_pct}%`
+      if (rsyncPct) rsyncPct.textContent = `${p.rsync_pct}%`
       if (rsyncEta) rsyncEta.textContent = p.rsync_eta ? `ETA ${p.rsync_eta}` : ''
     } else {
       if (rsyncRow) rsyncRow.classList.add('hidden')
+    }
+
+    // Render individual download progress bars — all actives shown, queued separately
+    const activeContainer  = document.getElementById('active-downloads-container');
+    const queuedContainer  = document.getElementById('queued-downloads-container');
+    const queuedSection    = document.getElementById('queued-section');
+    const countBadge       = document.getElementById('active-count-badge');
+    if (activeContainer) {
+      const inProgress = [];   // pct > 0 or bytes_done > 0 → actually transferring
+      const queued     = [];   // detected but 0 bytes moved yet
+
+      groups.forEach(g => {
+        g.entries.forEach(e => {
+          if (e.dl_progress && e.status !== 'done') {
+            const p = e.dl_progress;
+            if (p.bytes_done > 0 || p.pct > 0) {
+              inProgress.push({ name: e.name, progress: p, groupLabel: g.label });
+            } else {
+              queued.push({ name: e.name, progress: p, groupLabel: g.label });
+            }
+          }
+        });
+      });
+
+      const renderBar = (dl, compact = false) => {
+        const prg = dl.progress;
+        const pct = prg.pct ?? 0;
+        const barColor = prg.has_current ? 'bg-cyan-500' : 'bg-blue-500';
+        let details = '';
+        if (prg.bytes_total > 0) {
+          details = `${formatBytes(prg.bytes_done)} / ${formatBytes(prg.bytes_total)} · ${pct}%`;
+        } else if (prg.sst_total > 0) {
+          details = `${prg.sst_done} / ${prg.sst_total} arch. · ${pct}%`;
+        } else {
+          details = prg.has_current ? '100% · completo' : 'iniciando…';
+        }
+        if (compact) {
+          return `<div class="flex items-center gap-2">
+            <span class="text-[10px] text-gray-400 font-mono w-32 truncate">${dl.name}</span>
+            <div class="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+              <div class="${barColor}/50 h-full rounded-full" style="width:${pct || 2}%"></div>
+            </div>
+            <span class="text-[10px] text-gray-500 font-mono w-20 text-right">${details}</span>
+          </div>`;
+        }
+        return `
+          <div class="space-y-1 bg-gray-950/20 p-2.5 rounded-lg border border-gray-800/30">
+            <div class="flex items-center justify-between text-xs">
+              <div class="min-w-0">
+                <span class="font-bold text-gray-200">${dl.name}</span>
+                <span class="text-[10px] text-gray-500 ml-1.5">(${dl.groupLabel})</span>
+              </div>
+              <span class="text-gray-400 font-mono text-[10px] shrink-0 ml-2">${details}</span>
+            </div>
+            <div class="h-2 bg-gray-800 rounded-full overflow-hidden border border-gray-700/30">
+              <div class="${barColor} h-full rounded-full transition-all duration-500 animate-pulse" style="width:${pct || 2}%"></div>
+            </div>
+          </div>`;
+      };
+
+      if (countBadge) countBadge.textContent = `${inProgress.length} en progreso`;
+
+      if (inProgress.length === 0 && queued.length === 0) {
+        activeContainer.innerHTML = '<p class="text-xs text-gray-550 italic">No hay descargas activas en este momento.</p>';
+      } else {
+        activeContainer.innerHTML = inProgress.length > 0
+          ? inProgress.map(dl => renderBar(dl, false)).join('')
+          : '<p class="text-xs text-gray-550 italic">Ninguna descarga en progreso ahora mismo.</p>';
+      }
+
+      if (queuedSection && queuedContainer) {
+        if (queued.length > 0) {
+          queuedSection.classList.remove('hidden');
+          queuedContainer.innerHTML = queued.map(dl => renderBar(dl, true)).join('');
+        } else {
+          queuedSection.classList.add('hidden');
+        }
+      }
     }
   } catch(e) { /* ignore */ }
 }
@@ -757,7 +1149,61 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }
 
+// ── Disk Projection Panel ──────────────────────────────────────────────────────
+async function loadDiskPanel() {
+  try {
+    const d = await apiFetch('/api/disk');
+    if (!d) return;
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('disk-used-human',    d.disk_used_human   ?? _fmtBytes(d.disk_used));
+    set('disk-free-human',    d.disk_free_human   ?? _fmtBytes(d.disk_free));
+    set('disk-total-human',   d.disk_total_human  ?? _fmtBytes(d.disk_total));
+    set('disk-pending-human', d.pending_remaining_human ?? '—');
+
+    const usedPct    = d.disk_used_pct ?? 0;
+    const pendingPct = d.disk_total > 0 ? Math.min(100 - usedPct, d.pending_remaining / d.disk_total * 100) : 0;
+
+    const usedBar    = document.getElementById('disk-used-bar');
+    const pendingBar = document.getElementById('disk-pending-bar');
+    if (usedBar)    { usedBar.style.width = usedPct + '%'; }
+    if (pendingBar) {
+      pendingBar.style.left  = usedPct + '%';
+      pendingBar.style.width = Math.min(pendingPct, 100 - usedPct) + '%';
+      pendingBar.className   = `h-full rounded-full transition-all duration-700 absolute top-0 ${d.will_overflow ? 'bg-red-500/80' : 'bg-amber-500/70'}`;
+    }
+
+    const badge   = document.getElementById('disk-alert-badge');
+    const msgBox  = document.getElementById('disk-overflow-msg');
+    if (d.will_overflow) {
+      if (badge) {
+        badge.textContent = '⚠ ESPACIO INSUFICIENTE';
+        badge.className   = 'text-[10px] font-bold px-2 py-0.5 rounded border bg-red-950/60 border-red-700 text-red-300';
+        badge.classList.remove('hidden');
+      }
+      if (msgBox) {
+        msgBox.className   = 'rounded-lg border p-2.5 text-xs bg-red-950/30 border-red-800/50 text-red-300';
+        msgBox.innerHTML   = `<strong>⚠ Atención:</strong> Las descargas pendientes requieren <strong>${d.pending_remaining_human}</strong> adicionales pero solo quedan <strong>${d.disk_free_human}</strong> libres. El disco se llenará en <strong>${d.overflow_margin_human}</strong>. Considera mover datos o ampliar almacenamiento antes de continuar.`;
+        msgBox.classList.remove('hidden');
+      }
+    } else {
+      if (badge)  badge.classList.add('hidden');
+      if (msgBox) msgBox.classList.add('hidden');
+    }
+  } catch(e) { /* disk panel is non-critical */ }
+}
+
+// Fallback bytes formatter (mirrors formatBytes but accessible here)
+function _fmtBytes(b) {
+  if (!b || b === 0) return '0 B';
+  const units = ['B','KB','MB','GB','TB'];
+  let i = 0;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  return `${b.toFixed(1)} ${units[i]}`;
+}
+
 async function loadLog() {
+
   try {
     const r = await apiFetch('/api/log?lines=150')
     const pre = document.getElementById('log-content')
@@ -817,14 +1263,37 @@ function showAlert(type, msg) {
   alertTimer = setTimeout(() => el.classList.add('hidden'), 6000)
 }
 
+async function loadChartHistory() {
+  try {
+    const history = await apiFetch('/api/update/history');
+    if (history && history.length > 0) {
+      chartHistory.times = history.map(h => h.time);
+      chartHistory.speeds = history.map(h => parseSpeedToMBs(h.speed));
+      chartHistory.progress = history.map(h => h.pct);
+
+      const recent = history.slice(-40);
+      chartRealtime.times = recent.map(h => h.time);
+      chartRealtime.speeds = recent.map(h => parseSpeedToMBs(h.speed));
+      chartRealtime.progress = recent.map(h => h.pct);
+      
+      const lastPoint = history[history.length - 1];
+      updateDownloadChart(parseSpeedToMBs(lastPoint.speed), lastPoint.pct);
+    }
+  } catch(e) { /* ignore */ }
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────────
 async function init() {
   // Check running state immediately — in parallel with data loading
-  const runningCheck = apiFetch('/api/update/running').then(r => {
-    if (r.running) { setUpdateRunning(true); startUpdatePoll() }
+  const runningCheck = apiFetch('/api/update/running').then(async r => {
+    if (r.running) {
+      setUpdateRunning(true);
+      await loadChartHistory();
+      startUpdatePoll();
+    }
   }).catch(() => {})
 
-  await Promise.all([refresh(), loadDisk(), loadLog(), runningCheck])
+  await Promise.all([refresh(), loadDisk(), loadLog(), runningCheck, loadUpdateCheck()])
 
   // Auto-refresh: every 15s when downloads are active, every 5min otherwise
   function scheduleRefresh() {
@@ -833,6 +1302,7 @@ async function init() {
     )
     setTimeout(async () => {
       await refresh()
+      if (hasActive) loadDiskPanel()   // refresh disk projection while downloading
       scheduleRefresh()
     }, hasActive ? 15_000 : 300_000)
   }
