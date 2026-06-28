@@ -17,13 +17,9 @@ from fastapi.staticfiles import StaticFiles
 app = FastAPI(title="REEV DB Monitor", version="1.0.0")
 
 # ── Configuration (env-var overridable for Docker) ────────────────────────────
-DATA_DIR   = Path(os.environ.get("DATA_DIR",   "/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data"))
-LOG_FILE   = Path(os.environ.get("LOG_FILE",   "/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/download-smart.log"))
-NAS_HOST   = os.environ.get("NAS_HOST",   "192.168.0.193")
-NAS_USER   = os.environ.get("NAS_USER",   "arkantu")
-NAS_SCRIPT = os.environ.get("NAS_SCRIPT", "/mnt/swarm-storage/reev-data/download-smart.sh")
-NAS_LOG    = os.environ.get("NAS_LOG",    "/mnt/swarm-storage/reev-data/download-smart.log")
-SSH_KEY    = os.environ.get("SSH_KEY",    "/root/.ssh/id_ed25519")
+DATA_DIR   = Path(os.environ.get("DATA_DIR",   "/nas/data"))
+LOG_FILE   = Path(os.environ.get("LOG_FILE",   "/nas/download-smart.log"))
+DL_SCRIPT  = os.environ.get("DL_SCRIPT",  "/nas/download-smart.sh")
 
 # ── Database groups to monitor ─────────────────────────────────────────────────
 DB_GROUPS = [
@@ -384,15 +380,13 @@ async def get_group_size(group_id: str):
 
 
 def _nas_script_running() -> Optional[int]:
-    """Return remote PID of download-smart.sh if running on NAS, else None."""
+    """Return local PID of download-smart.sh if running, else None."""
     try:
         r = subprocess.run(
-            ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
-             "-o", "ConnectTimeout=5", "-i", SSH_KEY, f"{NAS_USER}@{NAS_HOST}",
-             f"pgrep -f {NAS_SCRIPT} | head -1"],
-            capture_output=True, text=True, timeout=8,
+            ["pgrep", "-f", DL_SCRIPT],
+            capture_output=True, text=True, timeout=5,
         )
-        pid_str = r.stdout.strip()
+        pid_str = r.stdout.strip().splitlines()[0] if r.stdout.strip() else ""
         return int(pid_str) if pid_str.isdigit() else None
     except Exception:
         return None
@@ -407,35 +401,26 @@ def update_running():
 
 @app.get("/api/update/progress")
 def update_progress():
-    """Return done/total count from the manifest and current rsync % from the log."""
-    # Count done entries on the NAS via SSH (manifest paths use NAS paths)
+    """Return done/total count from the manifest and current aria2/rsync % from the log."""
     done, total, rsync_pct, rsync_eta, current_file = 0, 0, None, None, None
+
+    # Count done entries from local manifest
     try:
-        manifest_path = NAS_LOG.replace("download-smart.log", "reev-static/data/download/.manifest-expected-dones")
-        r = subprocess.run(
-            ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
-             "-o", "ConnectTimeout=5", "-i", SSH_KEY, f"{NAS_USER}@{NAS_HOST}",
-             f"total=$(wc -l < {manifest_path} 2>/dev/null || echo 0); "
-             f"done=$(while IFS= read -r f; do [ -f \"$f\" ] && echo ok; done < {manifest_path} 2>/dev/null | wc -l); "
-             f"echo \"$done $total\""],
-            capture_output=True, text=True, timeout=12,
-        )
-        parts = r.stdout.strip().split()
-        if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
-            done, total = int(parts[0]), int(parts[1])
+        manifest_path = DATA_DIR / "download" / ".manifest-expected-dones"
+        if manifest_path.exists():
+            lines_m = manifest_path.read_text().splitlines()
+            total = len(lines_m)
+            done = sum(1 for f in lines_m if f.strip() and Path(f.strip()).exists())
     except Exception:
         pass
 
-    # Parse rsync progress and current file from log tail
+    # Parse progress from local log tail
     try:
         r = subprocess.run(
-            ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
-             "-o", "ConnectTimeout=5", "-i", SSH_KEY, f"{NAS_USER}@{NAS_HOST}",
-             f"tail -200 {NAS_LOG}"],
-            capture_output=True, text=True, timeout=10,
+            ["tail", "-200", str(LOG_FILE)],
+            capture_output=True, text=True, timeout=5,
         )
         lines = r.stdout.splitlines()
-        # Find last rsync progress line: "    12,345,678  42%  1.23MB/s    0:01:23"
         pct_re = re.compile(r'[\d,]+\s+(\d+)%\s+[\d.]+\w+/s\s+([\d:]+)')
         for line in reversed(lines):
             m = pct_re.search(line)
@@ -443,13 +428,11 @@ def update_progress():
                 rsync_pct = int(m.group(1))
                 rsync_eta = m.group(2)
                 break
-        # Find last meaningful status line from the script (bracketed timestamp lines)
         skip_re = re.compile(r'NOTE:|rsync://|sending|receiving|bytes/sec|total size|^\s*[\d,]+\s+\d+%|^building|^delta|^created|^sent|^recv')
         for line in reversed(lines):
             stripped = line.strip()
             if not stripped:
                 continue
-            # Only consider lines from our script (have [YYYY-MM-DD HH:MM:SS] prefix)
             ts_match = re.match(r'^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] (.+)$', stripped)
             if ts_match:
                 content = ts_match.group(1).strip()
@@ -472,40 +455,29 @@ def update_progress():
 
 @app.post("/api/update/start")
 def start_update():
-    """Launch download-smart.sh on the NAS via SSH (background nohup)."""
+    """Launch download-smart.sh locally in background (nohup)."""
     if _nas_script_running() is not None:
         raise HTTPException(409, "Update already running")
 
-    cmd = [
-        "ssh",
-        "-o", "StrictHostKeyChecking=no",
-        "-o", "BatchMode=yes",
-        "-i", SSH_KEY,
-        f"{NAS_USER}@{NAS_HOST}",
-        f"nohup {NAS_SCRIPT} >> {NAS_LOG} 2>&1 &",
-    ]
+    if not Path(DL_SCRIPT).exists():
+        raise HTTPException(404, f"Script not found: {DL_SCRIPT}")
+
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        proc.wait(timeout=10)  # SSH exits quickly after launching nohup background job
-        return {"started": True, "cmd": " ".join(cmd)}
+        log_file = open(str(LOG_FILE), "a")
+        proc = subprocess.Popen(
+            ["bash", DL_SCRIPT],
+            stdout=log_file,
+            stderr=log_file,
+            start_new_session=True,  # detach from parent process group
+        )
+        return {"started": True, "pid": proc.pid, "script": DL_SCRIPT}
     except Exception as exc:
         raise HTTPException(500, str(exc))
 
 
 @app.get("/api/log")
 def get_log(lines: int = 200):
-    """Return the last N lines of the download log (via SSH to NAS for freshness)."""
-    try:
-        r = subprocess.run(
-            ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
-             "-i", SSH_KEY, f"{NAS_USER}@{NAS_HOST}", f"tail -{lines} {NAS_LOG}"],
-            capture_output=True, text=True, timeout=15,
-        )
-        if r.returncode == 0 and r.stdout:
-            return {"content": r.stdout, "file": NAS_LOG}
-    except Exception:
-        pass
-    # Fallback: local sshfs mount
+    """Return the last N lines of the local download log."""
     try:
         r = subprocess.run(
             ["tail", f"-{lines}", str(LOG_FILE)],
@@ -518,16 +490,10 @@ def get_log(lines: int = 200):
 
 @app.get("/api/log/stream")
 async def stream_log():
-    """SSE stream via SSH tail -f (bypasses sshfs cache for real-time updates)."""
+    """SSE stream of local download log via tail -f."""
     async def _gen():
-        cmd = [
-            "ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
-            "-o", "ServerAliveInterval=10",
-            "-i", SSH_KEY, f"{NAS_USER}@{NAS_HOST}",
-            f"tail -n 80 -f {NAS_LOG}",
-        ]
         proc = await asyncio.create_subprocess_exec(
-            *cmd,
+            "tail", "-n", "80", "-f", str(LOG_FILE),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
         )

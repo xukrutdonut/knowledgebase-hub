@@ -2,7 +2,7 @@
 # Download and import gnomAD v4.1 chrX/Y for GRCh38
 set -euo pipefail
 
-DATA=/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+DATA=/media/arkantu/Storage1TB/reev/volumes/reev-static/data
 DL_DIR="$DATA/download/annonars"
 VCF_DIR="$DATA/download/gnomad-vcf-grch38"
 mkdir -p "$VCF_DIR"

@@ -2,7 +2,7 @@
 # Continues the gnomAD GRCh38 genomes chrX/Y import after VCF filtering
 set -euo pipefail
 
-DATA=/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+DATA=/media/arkantu/Storage1TB/reev/volumes/reev-static/data
 DL_DIR="$DATA/download/annonars"
 VCF_DIR="$DATA/download/gnomad-vcf-grch38"
 LOG=/home/arkantu/workspace/reev/import-genomes-chrxy-grch38.log

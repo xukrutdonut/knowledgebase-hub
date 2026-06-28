@@ -2,8 +2,8 @@
 set -euo pipefail
 
 S3_BASE="https://ceph-s3-public.cubi.bihealth.org/varfish-public/full"
-TARGET_BASE="/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data/download/annonars"
-ANNONARS_DIR="/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data/annonars/grch37"
+TARGET_BASE="/media/arkantu/Storage1TB/reev/volumes/reev-static/data/download/annonars"
+ANNONARS_DIR="/media/arkantu/Storage1TB/reev/volumes/reev-static/data/annonars/grch37"
 
 download_db() {
     local db_name="$1"

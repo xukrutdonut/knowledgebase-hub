@@ -2,8 +2,8 @@
 set -euo pipefail
 
 BASE_URL="https://ceph-s3-public.cubi.bihealth.org/varfish-public/full/annonars"
-DL_DIR="/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data/download/annonars"
-GRCH37="/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data/annonars/grch37"
+DL_DIR="/media/arkantu/Storage1TB/reev/volumes/reev-static/data/download/annonars"
+GRCH37="/media/arkantu/Storage1TB/reev/volumes/reev-static/data/annonars/grch37"
 LOG="/home/arkantu/workspace/reev/download-annonars-grch37-missing.log"
 
 exec > >(tee -a "$LOG") 2>&1

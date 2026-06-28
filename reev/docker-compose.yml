@@ -272,13 +272,9 @@ services:
     environment:
       DATA_DIR: /nas/data
       LOG_FILE: /nas/download-smart.log
-      NAS_USER: "arkantu"
-      NAS_HOST: "192.168.0.100"
-      NAS_SCRIPT: /media/arkantu/Storage1TB/reev/download-smart.sh
-      NAS_LOG: /media/arkantu/Storage1TB/reev/download-smart.log
-      SSH_KEY: /root/.ssh/id_ed25519
+      DL_SCRIPT: /nas/download-smart.sh
     volumes:
-      # NAS data — read-only (sshfs mount propagated from host)
+      # DB data — read-only
       - type: bind
         source: /media/arkantu/Storage1TB/reev/volumes/reev-static/data
         target: /nas/data
@@ -287,10 +283,10 @@ services:
       - type: bind
         source: /media/arkantu/Storage1TB/reev/download-smart.log
         target: /nas/download-smart.log
-      # SSH key to trigger NAS update script
+      # Download script — ejecutado localmente desde el contenedor
       - type: bind
-        source: /home/arkantu/.ssh/id_ed25519
-        target: /root/.ssh/id_ed25519
+        source: /media/arkantu/Storage1TB/reev/download-smart.sh
+        target: /nas/download-smart.sh
         read_only: true
 
   # -- pgAdmin ---------------------------------------------------------------

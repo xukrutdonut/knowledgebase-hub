@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA="/mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data"
+DATA="/media/arkantu/Storage1TB/reev/volumes/reev-static/data"
 VCF_DIR="$DATA/download/gnomad-vcf-grch37"
 DL_DIR="$DATA/download/annonars"
 GRCH37="$DATA/annonars/grch37"
