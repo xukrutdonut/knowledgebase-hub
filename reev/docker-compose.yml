@@ -1,6 +1,8 @@
 ---
 # REEV v0.6.0 — Khazad-dum deployment (no traefik, NPM handles SSL)
-# Data on NAS via sshfs: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/
+# Data on local SSD storage: /media/arkantu/Storage1TB/reev/
+
+name: genomic-stack
 
 version: "3.9"
 
@@ -18,7 +20,7 @@ x-service-internal: &service_internal
   <<: *service_default
   volumes:
     - type: bind
-      source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+      source: /media/arkantu/Storage1TB/reev/volumes/reev-static/data
       target: /data
       read_only: true
 
@@ -51,7 +53,7 @@ services:
     image: nginx:1
     volumes:
       - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+        source: /media/arkantu/Storage1TB/reev/volumes/reev-static/data
         target: /data
         read_only: true
       - type: bind
@@ -138,12 +140,18 @@ services:
     container_name: reev-dotty
     hostname: dotty
     image: "ghcr.io/bihealth/dotty:0.2.1"
+    volumes:
+      - type: bind
+        source: /media/arkantu/Storage1TB/reev/volumes/reev-static/data
+        target: /data
+        read_only: true
+      - type: bind
+        source: /media/arkantu/Storage1TB/reev/volumes/seqrepo/2021-01-29/2024-12-20
+        target: /data/download/dotty/seqrepo
+        read_only: false
     environment:
       # Los archivos cdot y seqrepo están en /data/download/dotty/
       DATA_DIR: /data/download/dotty
-      # HAVE_SEQREPO=false: deshabilita validación SeqRepo en Dotty.
-      # El SeqRepo bihealth (v0.1.0) no contiene transcriptos NM_ → error al buscar p.ej. NM_006514.4:c.3361C>T
-      # Cuando el rsync de biocommons (~75 GB) termine, cambiar a "true" para validación completa.
       HAVE_SEQREPO: "true"
 
   # -- Mehari ----------------------------------------------------------------
@@ -186,8 +194,16 @@ services:
       AUTO_ACMG_SEQREPO_DATA_DIR: "/home/auto-acmg/seqrepo/master"
     volumes:
       - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data/download/dotty/2024-12-20
+        source: /media/arkantu/Storage1TB/reev/volumes/seqrepo/2021-01-29/2024-12-20
         target: /home/auto-acmg/seqrepo/master
+        read_only: true
+      - type: bind
+        source: ./volumes/auto-acmg-patches/seqvar.py
+        target: /auto-acmg/src/defs/seqvar.py
+        read_only: true
+      - type: bind
+        source: ./volumes/auto-acmg-patches/strucvar.py
+        target: /auto-acmg/src/defs/strucvar.py
         read_only: true
     depends_on:
       - annonars
@@ -257,19 +273,19 @@ services:
       DATA_DIR: /nas/data
       LOG_FILE: /nas/download-smart.log
       NAS_USER: "arkantu"
-      NAS_HOST: "192.168.0.193"
-      NAS_SCRIPT: /mnt/swarm-storage/reev-data/download-smart.sh
-      NAS_LOG: /mnt/swarm-storage/reev-data/download-smart.log
+      NAS_HOST: "192.168.0.100"
+      NAS_SCRIPT: /media/arkantu/Storage1TB/reev/download-smart.sh
+      NAS_LOG: /media/arkantu/Storage1TB/reev/download-smart.log
       SSH_KEY: /root/.ssh/id_ed25519
     volumes:
       # NAS data — read-only (sshfs mount propagated from host)
       - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/reev-static/data
+        source: /media/arkantu/Storage1TB/reev/volumes/reev-static/data
         target: /nas/data
         read_only: true
       # Download log — rw para que el monitor pueda escribir entradas propias
       - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/download-smart.log
+        source: /media/arkantu/Storage1TB/reev/download-smart.log
         target: /nas/download-smart.log
       # SSH key to trigger NAS update script
       - type: bind
@@ -301,7 +317,10 @@ services:
     <<: *service_default
     container_name: reev-jbrowse2
     hostname: jbrowse2
-    image: "192.168.0.193:5555/jbrowse2-web:latest"
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/services/jbrowse2
+      dockerfile: Dockerfile
+    image: reev-jbrowse2:latest
     ports:
       - "3006:80"
 
@@ -335,7 +354,7 @@ services:
       WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
     volumes:
       - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/variant-tracker/clinvar
+        source: /media/arkantu/Storage1TB/reev/volumes/variant-tracker/clinvar
         target: /data/clinvar
     depends_on:
       - postgres
@@ -368,7 +387,7 @@ services:
       LAB_NAME: ${LAB_NAME:-Laboratorio de Neuropediatría}
     volumes:
       - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/variant-tracker/clinvar
+        source: /media/arkantu/Storage1TB/reev/volumes/variant-tracker/clinvar
         target: /data/clinvar
     depends_on:
       - variant-tracker
@@ -391,7 +410,7 @@ services:
       CLINVAR_DATA_DIR: /data/clinvar
     volumes:
       - type: bind
-        source: /mnt/pi-nas/raid-hdd/swarm-storage/reev-data/active/docker-volumes/variant-tracker/clinvar
+        source: /media/arkantu/Storage1TB/reev/volumes/variant-tracker/clinvar
         target: /data/clinvar
     depends_on:
       - variant-tracker
@@ -464,31 +483,52 @@ services:
       - "--broker=amqp://guest@rabbitmq:5672//"
       - "flower"
 
-  # -- NeuropedGx Hub (neuropediatric gene panel + variant classifier) --------
-  neuropedgx-hub:
-    container_name: neuropedgx-hub
-    hostname: neuropedgx-hub
+  # -- Knowledgebase Hub (panel génico clínico + clasificación ACMG) -----------
+  knowledgebase-hub:
+    container_name: knowledgebase-hub
+    hostname: knowledgebase-hub
     build:
-      context: ../services/neuropedgx-hub
+      context: ../services/knowledgebase-hub
       dockerfile: Dockerfile
+    image: knowledgebase-hub:latest
     restart: unless-stopped
     ports:
-      - "8405:8000"
+      - "8406:8000"
     environment:
       REEV_API_URL: "http://reev-backend:8080"
+      REEV_EXTERNAL_URL: "https://reev.neuropedialab.org"
       PROTEIN_VIEWER_URL: "http://protein-viewer:3000"
       PROTEIN_VIEWER_EXTERNAL_URL: "https://protein.neuropedialab.org"
-      REEV_EXTERNAL_URL: "https://reev.neuropedialab.org"
+      VARIANT_TRACKER_URL: "http://variant-tracker:8000"
     networks:
       - reev
     volumes:
-      - ../services/neuropedgx-hub/data:/app/data:ro
+      - ../services/knowledgebase-hub/data:/app/data:ro
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/stats')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 20s
+
+  # -- In Silico Predictor API (SpliceAI, AlphaMissense, AMELIE) -------------
+  in-silico-api:
+    <<: *service_default
+    container_name: in-silico-api
+    hostname: in-silico-api
+    build:
+      context: /home/arkantu/workspace/docker/genomic-stack/services/in-silico-api
+      dockerfile: Dockerfile
+    image: in-silico-api:latest
+    ports:
+      - "8407:8000"
+    environment:
+      IN_SILICO_DATA_DIR: /data/download/in-silico
+    volumes:
+      - type: bind
+        source: /media/arkantu/Storage1TB/reev/volumes/reev-static/data
+        target: /data
+        read_only: true
 
 # == Secrets =================================================================
 

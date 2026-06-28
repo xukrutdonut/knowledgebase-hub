@@ -11,6 +11,23 @@ try {
   const TRACKER_URL = 'https://tracker.neuropedialab.org';
   const DBG = '[LabNav ' + V + ']';
 
+  // Inject style to make the bookmark button red
+  const style = document.createElement('style');
+  style.textContent = `
+    i.mdi-bookmark, i.mdi-bookmark-outline {
+      color: #ef4444 !important;
+    }
+    .v-btn:has(.mdi-bookmark), .v-btn:has(.mdi-bookmark-outline) {
+      color: #ef4444 !important;
+      border-color: #ef4444 !important;
+    }
+  `;
+  if (document.head) {
+    document.head.appendChild(style);
+  } else {
+    document.documentElement.appendChild(style);
+  }
+
   // Visual badge — confirma que el script se ejecuta
   function showBadge(msg) {
     const b = document.createElement('div');
@@ -52,9 +69,47 @@ try {
     return null;
   }
 
+  function getHgvsPFromDOM() {
+    const text = document.body.innerText;
+    const match = text.match(/p\.(?:([A-Z][a-z]{2}|[A-Z]))(\d+)(?:([A-Z][a-z]{2}|[A-Z]))/);
+    if (match) {
+      return {
+        hgvs_p: match[0],
+        ref: match[1],
+        pos: match[2],
+        alt: match[3]
+      };
+    }
+    return null;
+  }
+
+  function getAcmgFromDOM() {
+    const text = document.body.innerText;
+    if (text.match(/likely\s+pathogenic/i)) return "Likely_pathogenic";
+    if (text.match(/pathogenic/i)) return "Pathogenic";
+    if (text.match(/likely\s+benign/i)) return "Likely_benign";
+    if (text.match(/benign/i)) return "Benign";
+    if (text.match(/vus|uncertain/i)) return "Uncertain_significance";
+    return "";
+  }
+
   function buildURLs(info) {
     const gene = info.geneURL || info.geneFromOrig || getGeneFromDOM() || '';
-    const proteinUrl = gene ? `${PROTEIN_URL}/?gene=${encodeURIComponent(gene)}` : PROTEIN_URL + '/';
+    let proteinUrl = PROTEIN_URL + '/';
+    if (gene) {
+      proteinUrl += `?gene=${encodeURIComponent(gene)}`;
+      const pInfo = getHgvsPFromDOM();
+      if (pInfo) {
+        proteinUrl += `&pos=${pInfo.pos}&ref=${pInfo.ref}&alt=${pInfo.alt}&hgvs=${encodeURIComponent(pInfo.hgvs_p)}`;
+        const acmg = getAcmgFromDOM();
+        if (acmg) {
+          proteinUrl += `&acmg=${acmg}`;
+        }
+      }
+      if (info.coords) {
+        proteinUrl += `&chrom=${encodeURIComponent(info.coords.chrom)}&gpos=${encodeURIComponent(info.coords.pos)}&gref=${encodeURIComponent(info.coords.ref)}&galt=${encodeURIComponent(info.coords.alt)}&build=${encodeURIComponent(info.coords.build)}`;
+      }
+    }
     const tp = new URLSearchParams();
     if (info.coords) { tp.set('build',info.coords.build); tp.set('chrom',info.coords.chrom); tp.set('pos',info.coords.pos); tp.set('ref',info.coords.ref); tp.set('alt',info.coords.alt); }
     if (gene)                    tp.set('gene', gene);
@@ -106,7 +161,17 @@ try {
     const info = parseURL();
     const currentId = info.coords ? `${info.coords.chrom}-${info.coords.pos}` : path;
 
-    if (document.getElementById('__lab-protein-btn__') && lastVariant === currentId) return true;
+    if (document.getElementById('__lab-protein-btn__') && lastVariant === currentId) {
+      const btn = document.getElementById('__lab-protein-btn__');
+      const pInfo = getHgvsPFromDOM();
+      if (path.includes('/seqvar/') && !btn.href.includes('&pos=') && pInfo) {
+        const urls = buildURLs(info);
+        btn.href = urls.proteinUrl;
+        const tBtn = document.getElementById('__lab-tracker-btn__');
+        if (tBtn) tBtn.href = urls.trackerUrl;
+      }
+      return (!path.includes('/seqvar/') || btn.href.includes('&pos='));
+    }
     document.getElementById('__lab-protein-btn__')?.remove();
     document.getElementById('__lab-tracker-btn__')?.remove();
     lastVariant = currentId;
@@ -125,7 +190,7 @@ try {
 
     showBadge('✓ Lab Tools inyectados');
     console.error(DBG, 'Done. Parent of pBtn:', pBtn.parentElement?.tagName, pBtn.parentElement?.className?.slice(0,40));
-    return true;
+    return (!path.includes('/seqvar/') || pBtn.href.includes('&pos='));
   }
 
   let pollTimer = null, pollCount = 0;

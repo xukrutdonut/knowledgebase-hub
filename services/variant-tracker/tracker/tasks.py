@@ -18,7 +18,7 @@ from typing import Optional
 import requests
 from celery import Celery
 from celery.schedules import crontab
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
 
 from tracker.config import get_settings
@@ -50,6 +50,7 @@ celery_app.conf.update(
     task_routes={
         "tracker.tasks.run_monthly_clinvar_sync": {"queue": "clinvar"},
         "tracker.tasks.send_pending_alerts": {"queue": "alerts"},
+        "tracker.tasks.sync_reev_bookmarks": {"queue": "default"},
     },
     beat_schedule={
         "monthly-clinvar-sync": {
@@ -59,6 +60,10 @@ celery_app.conf.update(
         "daily-pending-alerts": {
             "task": "tracker.tasks.send_pending_alerts",
             "schedule": crontab(hour=8, minute=0),
+        },
+        "sync-reev-bookmarks": {
+            "task": "tracker.tasks.sync_reev_bookmarks",
+            "schedule": 60.0,
         },
     },
 )
@@ -465,3 +470,135 @@ def _send_webhook(major, minor, other, session):
     except Exception as e:
         logger.error(f"Error enviando webhook: {e}")
 
+
+@celery_app.task(acks_late=True)
+def sync_reev_bookmarks():
+    """
+    Sincroniza los marcadores y casos clínicos de REEV con las variantes rastreadas
+    en Variant Tracker.
+    """
+    logger.info("sync_reev_bookmarks - START")
+    db_url_sync = settings.database_url_sync
+    reev_db_url = db_url_sync.replace("/vartracker", "/reev")
+    reev_engine = create_engine(reev_db_url)
+    tracker_engine = create_engine(db_url_sync)
+    try:
+        with reev_engine.connect() as conn:
+            bookmarks = conn.execute(text('SELECT "user", obj_id FROM bookmarks WHERE obj_type = \'seqvar\'')).fetchall()
+            caseinfos = conn.execute(text('SELECT "user", pseudonym, hpo_terms, zygosity, inheritance FROM caseinfo')).fetchall()
+            acmgseqvars = conn.execute(text('SELECT "user", seqvar_name, acmg_rank FROM acmgseqvar')).fetchall()
+        user_to_case = {}
+        for c in caseinfos:
+            user_to_case[str(c[0])] = {
+                "pseudonym": c[1],
+                "hpo_terms": c[2],
+                "zygosity": c[3],
+                "inheritance": c[4],
+            }
+        user_seqvar_to_acmg = {}
+        for a in acmgseqvars:
+            user_seqvar_to_acmg[(str(a[0]), a[1])] = a[2]
+        def calculate_acmg_class(acmg_rank_dict):
+            if not acmg_rank_dict or "criterias" not in acmg_rank_dict:
+                return "unknown"
+            criterias = acmg_rank_dict.get("criterias", [])
+            pvs, ps, pm, pp = 0, 0, 0, 0
+            ba, bs, bp = 0, 0, 0
+            for c in criterias:
+                if c.get("presence") == "Present":
+                    ev = c.get("evidence")
+                    if ev == "Pathogenic Very Strong": pvs += 1
+                    elif ev == "Pathogenic Strong": ps += 1
+                    elif ev == "Pathogenic Moderate": pm += 1
+                    elif ev == "Pathogenic Supporting": pp += 1
+                    elif ev == "Benign Standalone": ba += 1
+                    elif ev == "Benign Strong": bs += 1
+                    elif ev == "Benign Supporting": bp += 1
+            if ba > 0 or bs >= 2: return "benign"
+            if (bs == 1 and bp >= 1) or bp >= 2: return "likely_benign"
+            if (pvs >= 1 and (ps >= 1 or pm >= 2 or (pm == 1 and pp >= 1) or pp >= 2)) or (ps >= 2) or (ps == 1 and (pm >= 3 or (pm == 2 and pp >= 2) or (pm == 1 and pp >= 4))): return "pathogenic"
+            if (pvs == 1 and pm == 1) or (ps == 1 and (pm == 1 or pm == 2)) or (ps == 1 and pp >= 2) or (pm >= 3) or (pm == 2 and pp >= 2) or (pm == 1 and pp >= 4): return "likely_pathogenic"
+            if pvs > 0 or ps > 0 or pm > 0 or pp > 0: return "vus"
+            return "unknown"
+        with tracker_engine.begin() as conn_tracker:
+            existing_rows = conn_tracker.execute(text("SELECT id, variant_key, patient_pseudonym, active FROM tracked_variants")).fetchall()
+            existing_map = {(r[1], r[2]): (r[0], r[3]) for r in existing_rows}
+            synced_keys = set()
+            for b in bookmarks:
+                user_id_str = str(b[0])
+                variant_key = b[1]
+                parts = variant_key.split("-")
+                if len(parts) < 5:
+                    continue
+                build_str = parts[0]
+                chrom = parts[1]
+                pos = int(parts[2])
+                ref = parts[3]
+                alt = "-".join(parts[4:])
+                case = user_to_case.get(user_id_str)
+                if case:
+                    pseudonym = case["pseudonym"]
+                    hpo_list = case["hpo_terms"]
+                    if isinstance(hpo_list, list):
+                        hpo_arr = "{" + ",".join(str(h) for h in hpo_list) + "}"
+                    else:
+                        hpo_arr = None
+                    zygosity = case["zygosity"].value if hasattr(case["zygosity"], "value") else str(case["zygosity"]) if case["zygosity"] else None
+                    inheritance = case["inheritance"].value if hasattr(case["inheritance"], "value") else str(case["inheritance"]) if case["inheritance"] else None
+                else:
+                    pseudonym = f"reev_user_{user_id_str[:8]}"
+                    hpo_arr = None
+                    zygosity = None
+                    inheritance = None
+                acmg_rank = user_seqvar_to_acmg.get((user_id_str, variant_key))
+                acmg_class = calculate_acmg_class(acmg_rank)
+                synced_keys.add((variant_key, pseudonym))
+                key_tuple = (variant_key, pseudonym)
+                if key_tuple in existing_map:
+                    var_id, is_active = existing_map[key_tuple]
+                    conn_tracker.execute(text(
+                        "UPDATE tracked_variants SET active = true, patient_hpo_terms = :hpo, zygosity = :zyg, "
+                        "inheritance = :inh, current_acmg_class = :acmg_class, updated_at = NOW() "
+                        "WHERE id = :id"
+                    ), {
+                        "hpo": hpo_arr,
+                        "zyg": zygosity,
+                        "inh": inheritance,
+                        "acmg_class": acmg_class,
+                        "id": var_id
+                    })
+                else:
+                    import uuid
+                    new_id = str(uuid.uuid4())
+                    genome_build = "grch37" if build_str.lower() in ("grch37", "hg19") else "grch38"
+                    conn_tracker.execute(text(
+                        "INSERT INTO tracked_variants (id, variant_key, genome_build, chrom, pos, ref, alt, "
+                        "patient_pseudonym, patient_hpo_terms, zygosity, inheritance, current_acmg_class, "
+                        "active, added_at, updated_at) "
+                        "VALUES (:id, :key, :build, :chrom, :pos, :ref, :alt, :pseudonym, :hpo, :zyg, :inh, :acmg_class, "
+                        "true, NOW(), NOW())"
+                    ), {
+                        "id": new_id,
+                        "key": variant_key,
+                        "build": genome_build,
+                        "chrom": chrom,
+                        "pos": pos,
+                        "ref": ref,
+                        "alt": alt,
+                        "pseudonym": pseudonym,
+                        "hpo": hpo_arr,
+                        "zyg": zygosity,
+                        "inh": inheritance,
+                        "acmg_class": acmg_class
+                    })
+            for key_tuple, (var_id, is_active) in existing_map.items():
+                if key_tuple not in synced_keys and is_active:
+                    conn_tracker.execute(text(
+                        "UPDATE tracked_variants SET active = false, updated_at = NOW() WHERE id = :id"
+                    ), {"id": var_id})
+        logger.info("sync_reev_bookmarks - END")
+    except Exception as e:
+        logger.error(f"Error in sync_reev_bookmarks: {e}")
+    finally:
+        reev_engine.dispose()
+        tracker_engine.dispose()

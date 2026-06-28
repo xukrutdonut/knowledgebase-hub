@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     protein_viewer_external_url: str = "https://protein.neuropedialab.org"  # URL del navegador
     reev_external_url: str = "https://reev.neuropedialab.org"
     variant_tracker_url: str = "http://variant-tracker:8000"
+    in_silico_api_url: str = "http://in-silico-api:8000"
     gene_panel_path: Path = _APP_DIR / "data" / "gene_panel.yml"
     db_path: Path = Path("/tmp/knowledgebase.db")
 
@@ -324,6 +325,7 @@ class VariantQuery(BaseModel):
     hgvs_c: str | None = None
     hgvs_p: str | None = None
     transcript: str | None = None
+    hpo_terms: list[str] | None = None
 
 
 class VariantReport(BaseModel):
@@ -335,6 +337,7 @@ class VariantReport(BaseModel):
     hotspot_match: dict | None
     reev_url: str | None
     protein_viewer_url: str | None
+    in_silico: dict | None = None
     disclaimer: str
 
 
@@ -615,6 +618,42 @@ def classify_variant(query: VariantQuery):
             f"?uniprot={gene.uniprot}&variant={query.hgvs_p}"
         )
 
+    # ── In Silico queries (SpliceAI, AlphaMissense, AMELIE) ──
+    in_silico_results = {}
+    if query.chrom and query.pos and query.ref and query.alt:
+        payload = {
+            "chrom": query.chrom,
+            "pos": query.pos,
+            "ref": query.ref,
+            "alt": query.alt,
+            "assembly": query.genome_build
+        }
+        try:
+            with httpx.Client(timeout=5.0) as client:
+                # 1. AlphaMissense
+                am_resp = client.post(f"{settings.in_silico_api_url}/api/alphamissense", json=payload)
+                if am_resp.status_code == 200:
+                    in_silico_results["alphamissense"] = am_resp.json()
+                
+                # 2. SpliceAI
+                sa_resp = client.post(f"{settings.in_silico_api_url}/api/spliceai", json=payload)
+                if sa_resp.status_code == 200:
+                    in_silico_results["spliceai"] = sa_resp.json()
+        except Exception as e:
+            logger.warning(f"Error querying in-silico-api databases: {str(e)}")
+
+    if query.hpo_terms and len(query.hpo_terms) > 0:
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                amelie_resp = client.post(
+                    f"{settings.in_silico_api_url}/api/amelie",
+                    json={"gene": query.gene, "hpo_terms": query.hpo_terms}
+                )
+                if amelie_resp.status_code == 200:
+                    in_silico_results["amelie"] = amelie_resp.json()
+        except Exception as e:
+            logger.warning(f"Error querying AMELIE via in-silico-api: {str(e)}")
+
     return VariantReport(
         gene=gene,
         variant=query.model_dump(exclude_none=True),
@@ -624,6 +663,7 @@ def classify_variant(query: VariantQuery):
         hotspot_match=hotspot_match,
         reev_url=reev_url,
         protein_viewer_url=protein_viewer_url,
+        in_silico=in_silico_results if in_silico_results else None,
         disclaimer=(
             "⚠️ AVISO LEGAL: Este informe es una capa de RECOMENDACIÓN INFORMATIVA "
             "basada en el panel curado NeuropedGx. NO sustituye la clasificación ACMG "

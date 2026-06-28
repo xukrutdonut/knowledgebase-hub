@@ -69,8 +69,8 @@
 
     /* Panel derecho — visualizador */
     .viewer-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .viewer-tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; flex-shrink: 0; }
-    .tab { padding: 10px 18px; font-size: 0.85rem; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; }
+    .viewer-tabs { display: flex; background: #1e293b; border-bottom: 1px solid #334155; flex-shrink: 0; overflow-x: auto; white-space: nowrap; }
+    .tab { padding: 10px 18px; font-size: 0.85rem; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; }
     .tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
 
     #molstar-container { flex: 1; position: relative; }
@@ -160,12 +160,18 @@
     <!-- Predictores de patogenicidad -->
     <div class="sidebar-section">
       <h2>🎯 Predictores de patogenicidad</h2>
-      <label>Variante genómica (GRCh38)</label>
+      <label>Variante genómica</label>
+      <div class="variant-input-group" style="margin-bottom:6px;">
+        <select id="pred-build" style="width:100px;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;font-size:0.85rem;">
+          <option value="GRCh38">GRCh38</option>
+          <option value="GRCh37">GRCh37</option>
+        </select>
+        <input type="text" id="pred-chrom" placeholder="Chr" class="small" style="flex:1;">
+      </div>
       <div class="variant-input-group">
-        <input type="text" id="pred-chrom" placeholder="Chr" class="small" value="">
-        <input type="text" id="pred-pos" placeholder="Pos" class="small">
-        <input type="text" id="pred-ref" placeholder="Ref" class="small">
-        <input type="text" id="pred-alt" placeholder="Alt" class="small">
+        <input type="text" id="pred-pos" placeholder="Pos" style="flex:2;">
+        <input type="text" id="pred-ref" placeholder="Ref" class="small" style="flex:1;">
+        <input type="text" id="pred-alt" placeholder="Alt" class="small" style="flex:1;">
       </div>
       <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="loadPredictors()">Ver predictores</button>
       <div id="predictor-list" class="predictor-list" style="margin-top:8px;"></div>
@@ -176,8 +182,8 @@
   <!-- ── Viewer ──────────────────────────────────────────────────── -->
   <div class="viewer-area">
     <div class="viewer-tabs">
-      <div class="tab active" onclick="switchTab('3d')">🔬 3D Mol*</div>
-      <div class="tab" onclick="switchTab('pae')">📊 PAE AlphaFold</div>
+      <div class="tab active" id="tab-3d" onclick="switchTab('3d')">🔬 3D Mol*</div>
+      <div class="tab" id="tab-pae" onclick="switchTab('pae')">📊 PAE AlphaFold</div>
     </div>
 
     <div id="molstar-container">
@@ -200,6 +206,8 @@ let currentGene    = null;
 let currentUniprot = null;
 let currentStructure = null;
 let viewer3d = null;
+let pendingHighlight = null;
+let currentBuild = "GRCh38";
 
 // ── Inicialización ───────────────────────────────────────────────────────────
 
@@ -208,10 +216,54 @@ document.addEventListener("DOMContentLoaded", () => {
     backgroundColor: "0x0f172a",
     antialias: true,
   });
-  // Pre-fill gene from URL param ?gene=SYMBOL
-  const urlGene = new URLSearchParams(window.location.search).get("gene");
+  // Pre-fill gene and variant details from URL params
+  const params = new URLSearchParams(window.location.search);
+  const urlGene = params.get("gene");
+  const urlPos = params.get("pos");
+  const urlRef = params.get("ref");
+  const urlAlt = params.get("alt");
+  const urlHgvs = params.get("hgvs");
+  const urlAcmg = params.get("acmg");
+  const urlChrom = params.get("chrom");
+  const urlGpos = params.get("gpos");
+  const urlGref = params.get("gref");
+  const urlGalt = params.get("galt");
+  const urlBuild = params.get("build");
+
+  if (urlBuild) {
+    const norm = urlBuild.toLowerCase();
+    currentBuild = (norm.includes("37") || norm.includes("19")) ? "GRCh37" : "GRCh38";
+  }
+  document.getElementById("pred-build").value = currentBuild;
+
   if (urlGene) {
     document.getElementById("gene-input").value = urlGene.toUpperCase();
+  }
+  if (urlPos) {
+    document.getElementById("variant-pos").value = urlPos;
+    document.getElementById("variant-ref").value = urlRef || "";
+    document.getElementById("variant-alt").value = urlAlt || "";
+    document.getElementById("variant-hgvs").value = urlHgvs || "";
+    if (urlAcmg) {
+      let acmgVal = "";
+      const norm = urlAcmg.toLowerCase().replace(/[\s_-]+/g, "");
+      if (norm.includes("pathogenic") && norm.includes("likely")) acmgVal = "Likely_pathogenic";
+      else if (norm.includes("pathogenic")) acmgVal = "Pathogenic";
+      else if (norm.includes("benign") && norm.includes("likely")) acmgVal = "Likely_benign";
+      else if (norm.includes("benign")) acmgVal = "Benign";
+      else if (norm.includes("vus") || norm.includes("uncertain")) acmgVal = "Uncertain_significance";
+      if (acmgVal) {
+        document.getElementById("variant-acmg").value = acmgVal;
+      }
+    }
+    pendingHighlight = { pos: urlPos, ref: urlRef, alt: urlAlt, hgvs: urlHgvs, acmg: urlAcmg };
+  }
+  if (urlChrom) document.getElementById("pred-chrom").value = urlChrom;
+  if (urlGpos)  document.getElementById("pred-pos").value = urlGpos;
+  if (urlGref)  document.getElementById("pred-ref").value = urlGref;
+  if (urlGalt)  document.getElementById("pred-alt").value = urlGalt;
+  if (urlChrom && urlGpos && urlGref && urlGalt) {
+    loadPredictors();
   }
   searchByGene();
 });
@@ -294,6 +346,10 @@ async function loadAlphaFold(uniprotId, gene, protein, length) {
       <div class="confidence-bar confidence-${confClass}" style="width:${Math.min(confidence||50,100)}%"></div>
     `;
     if (af.paeImageUrl) document.getElementById("pae-image").src = af.paeImageUrl;
+    if (pendingHighlight) {
+      highlightVariant();
+      pendingHighlight = null;
+    }
 
   } catch (e) {
     loadFromPDB(uniprotId, gene);
@@ -316,6 +372,10 @@ async function loadFromPDB(uniprotId, gene) {
     viewer3d.zoomTo();
     viewer3d.render();
     setStatus(`📦 ${gene} · PDB: ${best.pdbId} · ${best.method} · ${best.resolution ? best.resolution.toFixed(2) + " Å" : "?"}`);
+    if (pendingHighlight) {
+      highlightVariant();
+      pendingHighlight = null;
+    }
   } catch (e) {
     setStatus(`Error cargando PDB: ${e.message}`);
   }
@@ -427,11 +487,11 @@ async function loadPortals(gene) {
       decipher: "🔍", omim: "📚", clinvar: "🏛️", uniprot: "🔗"
     };
     document.getElementById("portal-links").innerHTML = data.portals.map(p => `
-      <a href="${p.url}" target="_blank" rel="noopener" class="portal-link">
+      <div class="portal-link" style="cursor:pointer;" onclick="openPredictorTab('${p.label}', '${p.url}')">
         <span class="icon">${icons[p.type] || "🔗"}</span>
         <span>${p.label}</span>
         <span style="margin-left:auto;font-size:0.7rem;color:#475569">↗</span>
-      </a>
+      </div>
     `).join("");
   } catch (e) {
     console.error("Error cargando portales:", e);
@@ -441,25 +501,26 @@ async function loadPortals(gene) {
 // ── Predictores ──────────────────────────────────────────────────────────────
 
 async function loadPredictors() {
+  const build = document.getElementById("pred-build").value;
   const chrom = document.getElementById("pred-chrom").value.replace("chr", "");
   const pos = document.getElementById("pred-pos").value;
   const ref = document.getElementById("pred-ref").value;
   const alt = document.getElementById("pred-alt").value;
-
+ 
   if (!chrom || !pos || !ref || !alt) {
     alert("Introduce chrom, pos, ref y alt");
     return;
   }
-
+ 
   try {
-    const data = await apiFetch(`/api/predictors/${chrom}/${pos}/${ref}/${alt}`);
+    const data = await apiFetch(`/api/predictors/${chrom}/${pos}/${ref}/${alt}?build=${build}`);
     document.getElementById("predictor-list").innerHTML = data.predictors.map(p => `
       <div class="predictor-item">
         <div>
           <div style="font-weight:600;color:#e2e8f0">${p.name}</div>
           <div style="color:#64748b;font-size:0.72rem">${p.description}</div>
         </div>
-        <a href="${p.url}" target="_blank" rel="noopener">Abrir ↗</a>
+        <button class="btn btn-secondary btn-sm" onclick="openPredictorTab('${p.name}', '${p.url}')" style="padding:2px 8px;font-size:0.75rem;">Abrir ↗</button>
       </div>
     `).join("");
   } catch (e) {
@@ -471,18 +532,60 @@ async function loadPredictors() {
 
 function switchTab(tab) {
   document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-  event.target.classList.add("active");
+  const targetTab = document.getElementById(`tab-${tab}`) || event?.currentTarget || event?.target;
+  if (targetTab) targetTab.classList.add("active");
+
+  document.getElementById("molstar-container").style.display = "none";
+  document.getElementById("pae-container").classList.add("hidden");
+  document.querySelectorAll("[id^='container-pred-']").forEach(c => c.classList.add("hidden"));
 
   if (tab === "3d") {
     document.getElementById("molstar-container").style.display = "flex";
-    document.getElementById("pae-container").classList.add("hidden");
-  } else {
-    document.getElementById("molstar-container").style.display = "none";
+  } else if (tab === "pae") {
     document.getElementById("pae-container").classList.remove("hidden");
+  } else if (tab.startsWith("pred-")) {
+    const el = document.getElementById(`container-${tab}`);
+    if (el) el.classList.remove("hidden");
   }
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+function closePredictorTab(name, e) {
+  if (e) e.stopPropagation();
+  const tabEl = document.getElementById(`tab-pred-${name}`);
+  const containerEl = document.getElementById(`container-pred-${name}`);
+  if (tabEl) tabEl.remove();
+  if (containerEl) containerEl.remove();
+  switchTab("3d");
+}
+
+function openPredictorTab(name, url) {
+  const tabId = `pred-${name}`;
+  let tabEl = document.getElementById(`tab-pred-${name}`);
+  if (!tabEl) {
+    const tabsContainer = document.querySelector(".viewer-tabs");
+    tabEl = document.createElement("div");
+    tabEl.className = "tab";
+    tabEl.id = `tab-pred-${name}`;
+    tabEl.setAttribute("onclick", `switchTab('pred-${name}')`);
+    tabEl.innerHTML = `🎯 ${name} <span style="margin-left:6px;color:#ef4444;font-weight:bold;cursor:pointer;" onclick="closePredictorTab('${name}', event)">×</span>`;
+    tabsContainer.appendChild(tabEl);
+
+    const viewerArea = document.querySelector(".viewer-area");
+    const container = document.createElement("div");
+    container.id = `container-pred-${name}`;
+    container.className = "hidden";
+    container.style.cssText = "flex:1;display:flex;flex-direction:column;width:100%;height:100%;position:relative;background:#fff;";
+    container.innerHTML = `
+      <div style="background:#1e293b;padding:4px 16px;font-size:0.75rem;color:#94a3b8;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155;flex-shrink:0;">
+        <span>Cargando ${name}...</span>
+        <a href="${url}" target="_blank" rel="noopener" style="color:#38bdf8;text-decoration:none;font-weight:600;">¿No carga? Abrir en ventana nueva ↗</a>
+      </div>
+      <iframe src="${url}" style="flex:1;width:100%;border:none;background:#fff;"></iframe>
+    `;
+    viewerArea.insertBefore(container, document.getElementById("status-bar"));
+  }
+  switchTab(tabId);
+}
 
 async function apiFetch(path) {
   const res = await fetch(API + path);
